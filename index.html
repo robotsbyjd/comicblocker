@@ -200,7 +200,16 @@
     padding: 24px;
     overflow: auto;
   }
-  .pages-container { display: flex; gap: 24px; justify-content: center; }
+  .page-scale-shell {
+    display: block;
+    position: relative;
+  }
+  .pages-container {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    transform-origin: top left;
+  }
   .page-board {
     position: relative;
     width: 660px;
@@ -451,6 +460,48 @@
     .start-grid { grid-template-columns: 1fr; }
   }
 
+  @media (max-width: 720px) {
+    html, body { overflow-x: hidden; }
+    .header {
+      align-items: flex-start;
+      padding: 14px 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .brand-name { font-size: 18px; }
+    .brand-tag { max-width: 150px; line-height: 1.35; }
+    .header-actions { margin-left: 48px; }
+    .kofi-link { max-width: 116px; justify-content: center; text-align: center; line-height: 1.15; }
+    .project-strip { padding: 10px 16px; }
+    .project-strip label { width: 100%; align-items: flex-start; flex-direction: column; }
+    .project-strip input { width: 100%; min-width: 0; }
+    .main { padding: 14px 12px 48px; }
+    .mode-bar { align-items: stretch; }
+    .mode-btn { flex: 1; }
+    .mode-hint { flex-basis: 100%; text-align: left; line-height: 1.35; }
+    .toolbar, .page-nav, .props { gap: 8px; }
+    .toolbar button, .page-nav button, .props button { min-height: 34px; }
+    .canvas-wrap {
+      padding: 12px 8px;
+      overflow: hidden;
+    }
+    .script-section {
+      width: 100%;
+      max-width: none;
+    }
+    .panel-script-entry {
+      flex-direction: column;
+    }
+    .panel-script-num {
+      width: fit-content;
+    }
+    .modal {
+      width: calc(100vw - 48px);
+      max-height: calc(100vh - 72px);
+      overflow: auto;
+    }
+  }
+
   .text-editor-panel {
     display: grid;
     gap: 10px;
@@ -605,9 +656,11 @@
     <div id="props" class="props"></div>
 
     <div class="canvas-wrap">
-      <div class="pages-container">
-        <div id="page-left" class="page-board"></div>
-        <div id="page-right" class="page-board" style="display: none;"></div>
+      <div class="page-scale-shell">
+        <div class="pages-container">
+          <div id="page-left" class="page-board"></div>
+          <div id="page-right" class="page-board" style="display: none;"></div>
+        </div>
       </div>
 
       <div id="script-section" class="script-section">
@@ -1989,6 +2042,9 @@
   const $ = id => document.getElementById(id);
   const pageLeft = $('page-left');
   const pageRight = $('page-right');
+  const canvasWrap = document.querySelector('.canvas-wrap');
+  const pageScaleShell = document.querySelector('.page-scale-shell');
+  const pagesContainer = document.querySelector('.pages-container');
   const overviewEl = $('overview');
   const pageSelect = $('page-select');
   const pageTitle = $('page-title');
@@ -2014,6 +2070,30 @@
     toast.classList.add('show');
     clearTimeout(showToast._t);
     showToast._t = setTimeout(()=>{ toast.classList.remove('show'); }, ms);
+  }
+
+  function updateResponsivePageScale(){
+    if(!canvasWrap || !pageScaleShell || !pagesContainer) return;
+    const isMobile = window.innerWidth <= 720;
+    const unscaledWidth = spreadView && mode === 'page' && currentPage + 1 < pages.length
+      ? (PAGE_W * 2) + 24
+      : PAGE_W;
+    if(!isMobile || mode !== 'page'){
+      pageScaleShell.style.height = '';
+      pagesContainer.style.transform = '';
+      pagesContainer.style.width = '';
+      pagesContainer.style.height = '';
+      pagesContainer.style.marginLeft = '';
+      return;
+    }
+    const available = Math.max(260, pageScaleShell.clientWidth);
+    const scale = Math.min(1, available / unscaledWidth);
+    const scaledWidth = unscaledWidth * scale;
+    pageScaleShell.style.height = (PAGE_H * scale) + 'px';
+    pagesContainer.style.width = unscaledWidth + 'px';
+    pagesContainer.style.height = PAGE_H + 'px';
+    pagesContainer.style.marginLeft = Math.max(0, (available - scaledWidth) / 2) + 'px';
+    pagesContainer.style.transform = 'scale(' + scale + ')';
   }
 
   function uid(){ return 'el-' + (elIdCounter++); }
@@ -2461,6 +2541,7 @@
     } else {
       renderThumbMode();
     }
+    updateResponsivePageScale();
   }
 
   function renderOverview(){
@@ -3096,6 +3177,7 @@
     e.preventDefault();
     e.returnValue = '';
   });
+  window.addEventListener('resize', updateResponsivePageScale);
 
   // Compile script
   $('compile-script').onclick = ()=>{
