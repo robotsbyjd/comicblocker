@@ -1,0 +1,3515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Comic Blocker — Block your comic before you draw it</title>
+<meta name="description" content="Comic Blocker is a free comic panel layout and scripting tool for writers. Block pages, plan panels, write comic scripts, add captions and bubbles, and export your storyboard as PDF." />
+<meta property="og:title" content="Comic Blocker — Block your comic before you draw it" />
+<meta property="og:description" content="A free comic panel layout and scripting tool for writers. Block pages, plan panels, write scripts, add captions and bubbles, and export your storyboard as PDF." />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Comic Blocker — Block your comic before you draw it" />
+<meta name="twitter:description" content="A free comic panel layout and scripting tool for writers. Block pages, write scripts, and export your storyboard as PDF." />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-2: #141414;
+    --bg-3: #1c1c1c;
+    --line: #2a2a2a;
+    --line-2: #3a3a3a;
+    --text: #f5f5f5;
+    --text-dim: #a8a8a8;
+    --text-faint: #6e6e6e;
+    --accent: #fac775;
+    --accent-2: #ba7517;
+    --select: #4ea1f5;
+    --danger: #e26464;
+    --rotate: #5fc89e;
+    --paper: #ffffff;
+    --pad: #fffceb;
+    --pad-border: #ba7747;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+  button, select, input, textarea { font-family: inherit; color: inherit; }
+  button {
+    background: var(--bg-3);
+    color: var(--text);
+    border: 1px solid var(--line);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  button:hover { background: var(--bg-2); border-color: var(--line-2); }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); color: #1a1a1a; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: #ffd98a; }
+  .kofi-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #FF5E5B;
+    color: #fff !important;
+    border: 1px solid #FF5E5B;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.12s;
+  }
+  .kofi-link:hover { background: #ff7370; border-color: #ff7370; }
+  select, input[type="text"] {
+    background: var(--bg-3);
+    color: var(--text);
+    border: 1px solid var(--line);
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus { outline: 1px solid var(--select); border-color: var(--select); }
+  input[type="range"] { accent-color: var(--accent); }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid var(--line);
+    padding: 16px 24px;
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .brand-mark {
+    width: 36px; height: 42px;
+    border: 2px solid var(--text);
+    border-radius: 3px;
+    padding: 4px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1.1fr 0.75fr 0.9fr;
+    gap: 3px;
+    flex-shrink: 0;
+    background: #f7f7f7;
+    box-shadow: 3px 3px 0 var(--accent-2);
+    transform: rotate(-2deg);
+  }
+  .brand-panel {
+    background: var(--bg);
+    border-radius: 1px;
+  }
+  .brand-panel.wide { grid-column: 1 / -1; }
+  .brand-panel.tall { grid-row: span 2; }
+  .brand-text { display: flex; flex-direction: column; gap: 2px; }
+  .brand-name { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .brand-tag { font-size: 11px; color: var(--text-dim); font-family: var(--mono); letter-spacing: 0.5px; }
+  .header-spacer { flex: 1; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  .project-strip {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 24px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .project-strip label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .project-strip input { min-width: 190px; }
+
+  .recovery-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px;
+    background: #211806;
+    border-bottom: 1px solid #6a470f;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .recovery-banner.show { display: flex; }
+  .recovery-banner strong { color: var(--accent); }
+  .recovery-banner .spacer { flex: 1; }
+
+  /* Main layout */
+  .main { padding: 18px 24px 60px; max-width: 1400px; margin: 0 auto; }
+
+  /* Mode tabs */
+  .mode-bar { display: flex; gap: 6px; align-items: center; margin-bottom: 14px; }
+  .mode-btn { padding: 6px 14px; }
+  .mode-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+  .mode-hint { flex: 1; text-align: right; font-size: 11px; color: var(--text-faint); font-family: var(--mono); }
+
+  /* Toolbars */
+  .toolbar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  .divider { width: 1px; height: 18px; background: var(--line-2); margin: 0 4px; }
+
+  /* Page nav */
+  .page-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+
+  /* Properties panel */
+  .props {
+    display: none;
+    padding: 8px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .props .label { color: var(--text-dim); }
+
+  /* Canvas */
+  .canvas-wrap {
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 24px;
+    overflow: auto;
+  }
+  .pages-container { display: flex; gap: 24px; justify-content: center; }
+  .page-board {
+    position: relative;
+    width: 660px;
+    height: 1000px;
+    background: var(--paper);
+    border-radius: 4px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  /* Page elements */
+  .cmc-el { position: absolute; box-sizing: border-box; cursor: move; user-select: none; }
+  .cmc-el.selected { outline: 2px solid var(--select); outline-offset: 2px; z-index: 100; }
+  .cmc-panel-number {
+    position: absolute; top: 4px; left: 6px;
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    background: rgba(255,255,255,0.85);
+    color: var(--accent-2);
+    padding: 1px 6px; border-radius: 2px;
+    pointer-events: none;
+    letter-spacing: 0.5px;
+  }
+  .cmc-bubble, .cmc-thought, .cmc-caption, .cmc-sfx { padding: 8px 12px; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.25; word-break: break-word; white-space: pre-line; }
+  .cmc-bubble { border-radius: 50%; }
+  .cmc-thought { border-radius: 50%; border-style: dashed !important; }
+  .cmc-caption { font-style: italic; }
+  .cmc-sfx { background: transparent !important; border: none !important; font-weight: 700; font-style: italic; text-shadow: 1.5px 1.5px 0 rgba(0,0,0,0.15); }
+  .cmc-image { background-size: cover; background-position: center; background-repeat: no-repeat; }
+  .cmc-image-empty { background: #f1efe8; display: flex; align-items: center; justify-content: center; color: #888; font-size: 12px; }
+  .cmc-text-edit { background: transparent; border: none; outline: none; text-align: center; width: 100%; font: inherit; color: inherit; resize: none; padding: 0; }
+  .cmc-handle { position: absolute; width: 10px; height: 10px; background: var(--select); border: 1.5px solid white; border-radius: 50%; z-index: 10; }
+  .cmc-handle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
+  .cmc-handle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
+  .cmc-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+  .cmc-handle.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+  .cmc-handle.rot { top: -22px; left: 50%; transform: translateX(-50%); background: var(--rotate); cursor: grab; }
+  .cmc-tail { position: absolute; pointer-events: none; z-index: 4; overflow: visible; }
+  .cmc-tail-handle { position: absolute; width: 12px; height: 12px; background: var(--accent-2); border: 1.5px solid white; border-radius: 50%; z-index: 11; cursor: move; }
+
+  /* Script section */
+  .script-section { max-width: 660px; margin: 18px auto 0; padding: 0 4px; }
+  .script-divider {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+  }
+  .script-divider .line { flex: 1; height: 1px; background: var(--line-2); }
+  .script-direction-label {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    display: block; margin-bottom: 4px;
+  }
+  textarea.direction {
+    width: 100%; min-height: 50px; resize: vertical;
+    font-family: var(--mono); font-size: 12px; line-height: 1.6;
+    padding: 8px 10px;
+    background: var(--pad); border: 1px dashed var(--accent-2);
+    border-radius: 3px; color: #2C2C2A;
+  }
+  .panel-script-entry {
+    display: flex; gap: 10px;
+    background: var(--pad);
+    border: 1px dashed var(--pad-border);
+    border-radius: 3px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .panel-script-entry.highlighted {
+    border-color: var(--select);
+    border-style: solid;
+    box-shadow: 0 0 0 2px rgba(78, 161, 245, 0.2);
+  }
+  .panel-script-num {
+    flex-shrink: 0;
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    color: white; background: var(--accent-2);
+    padding: 2px 8px; border-radius: 2px;
+    height: fit-content;
+    letter-spacing: 0.5px; cursor: pointer;
+    user-select: none;
+  }
+  .panel-script-num:hover { background: #854F0B; }
+  .panel-script-text {
+    flex: 1; border: none; background: transparent; resize: vertical;
+    font-family: var(--mono); font-size: 12px; line-height: 1.6;
+    color: #2C2C2A; outline: none; min-height: 50px; padding: 0;
+  }
+  .panel-script-text:focus { background: rgba(255,255,255,0.6); }
+  .panel-script-text::placeholder { color: var(--accent-2); opacity: 0.55; font-style: italic; }
+  .empty-msg {
+    padding: 24px; text-align: center;
+    font-family: var(--mono); font-size: 12px; color: var(--accent-2);
+    background: var(--pad); border: 1px dashed var(--accent-2); border-radius: 3px;
+  }
+
+  /* Footer / status */
+  .status-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px; font-size: 11px; color: var(--text-faint);
+    font-family: var(--mono);
+  }
+
+  /* Overview thumbs */
+  .overview-section { margin-top: 18px; }
+  .overview-label { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+  .overview { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .thumb {
+    aspect-ratio: 660/1000;
+    background: var(--paper);
+    border: 1px solid var(--line-2);
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .thumb.active { outline: 2px solid var(--select); outline-offset: 1px; }
+  .thumb-num {
+    position: absolute; bottom: 1px; right: 2px;
+    font-size: 9px; color: #555;
+    background: rgba(255,255,255,0.85);
+    padding: 0 2px; border-radius: 2px;
+    font-family: var(--mono);
+  }
+  .thumb-shape { position: absolute; }
+
+  /* Color swatches */
+  .swatch {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid var(--line-2);
+    cursor: pointer; display: inline-block; vertical-align: middle;
+  }
+  .swatch.active { outline: 2px solid var(--select); outline-offset: 1px; }
+
+  /* Thumbnail mode */
+  .tmode-wrap { display: none; }
+  .tmode-grid {
+    background: #000;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 14px;
+  }
+  .tmode-page-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .tmode-page {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--line-2);
+    border-radius: 3px;
+    aspect-ratio: 660/1000;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .tmode-page.active { outline: 2px solid var(--select); outline-offset: 2px; }
+  .tmode-page-num {
+    position: absolute; top: 4px; left: 4px;
+    font-size: 10px; color: #555;
+    background: rgba(255,255,255,0.92);
+    padding: 1px 5px; border-radius: 2px;
+    font-family: var(--mono); font-weight: 600;
+    pointer-events: none; z-index: 2;
+  }
+  .tmode-panel {
+    position: absolute;
+    background: white;
+    border: 1px solid #1a1a1a;
+    cursor: move;
+  }
+  .tmode-panel.scripted { background: rgba(255, 240, 180, 0.7); }
+  .tmode-panel.dragging { opacity: 0.7; z-index: 5; }
+  .tmode-marker { position: absolute; width: 4px; height: 4px; border-radius: 50%; pointer-events: none; }
+  .tmode-title-input {
+    width: 100%; font-size: 11px; padding: 3px 6px;
+    border: 1px solid var(--line); border-radius: 3px;
+    background: var(--bg-2); color: var(--text-dim);
+    font-family: var(--mono);
+  }
+  .tmode-title-input:focus { background: var(--bg-3); color: var(--text); outline: 1px solid var(--select); }
+
+  /* Help modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    max-width: 720px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+    padding: 28px 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  }
+  .modal h2 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.3px; }
+  .modal h3 { margin: 22px 0 6px; font-size: 14px; color: var(--accent); font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase; }
+  .modal p, .modal li { color: var(--text-dim); line-height: 1.55; }
+  .modal ul { padding-left: 20px; }
+  .modal kbd {
+    background: var(--bg-3); border: 1px solid var(--line-2); border-bottom-width: 2px;
+    padding: 1px 6px; border-radius: 3px;
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+  }
+  .modal-close {
+    float: right; margin-left: 10px;
+  }
+  .modal-tagline { color: var(--text-faint); font-family: var(--mono); font-size: 12px; margin-bottom: 18px; }
+
+  .start-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .start-card {
+    display: grid;
+    gap: 8px;
+    text-align: left;
+    min-height: 126px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    border-radius: 6px;
+  }
+  .start-card strong {
+    display: block;
+    font-size: 15px;
+  }
+  .start-card span {
+    color: var(--text-dim);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .start-card.primary-card {
+    background: #211806;
+    border-color: #6a470f;
+  }
+  @media (max-width: 720px) {
+    .start-grid { grid-template-columns: 1fr; }
+  }
+
+  .text-editor-panel {
+    display: grid;
+    gap: 10px;
+  }
+  .text-editor-panel textarea {
+    width: 100%;
+    min-height: 180px;
+    resize: vertical;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid var(--line-2);
+    border-radius: 4px;
+    padding: 12px;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .text-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  /* Toast / status banner */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #1a1a1a;
+    padding: 10px 18px; border-radius: 4px;
+    font-weight: 600; font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 300;
+  }
+  .toast.show { opacity: 1; }
+
+  /* Icons (inline SVG-friendly via unicode where possible) */
+  .icon { display: inline-block; vertical-align: -1px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand-mark" aria-hidden="true">
+    <span class="brand-panel wide"></span>
+    <span class="brand-panel tall"></span>
+    <span class="brand-panel"></span>
+    <span class="brand-panel"></span>
+  </div>
+  <div class="brand-text">
+    <div class="brand-name">Comic Blocker</div>
+    <div class="brand-tag">Block your comic before you draw it.</div>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-actions">
+    <a id="kofi-link" class="kofi-link" href="https://ko-fi.com/deptappliedmagic" target="_blank" rel="noopener" title="If this is useful, buy me a coffee — thanks!"><span class="icon">☕</span> Support this tool</a>
+    <button id="help-btn" title="How to use"><span class="icon">?</span> Help</button>
+  </div>
+</div>
+
+<div class="project-strip">
+  <label>Project <input type="text" id="project-title" placeholder="Untitled comic" /></label>
+  <label>By <input type="text" id="project-author" placeholder="Your name" /></label>
+  <span class="header-spacer"></span>
+  <button id="new-project-btn" title="Start over or load the tutorial">New / Tutorial</button>
+</div>
+
+<div id="recovery-banner" class="recovery-banner">
+  <strong>Unsaved work found.</strong>
+  <span id="recovery-copy">Comic Blocker found a local recovery save.</span>
+  <span class="spacer"></span>
+  <button id="restore-autosave" class="primary">Restore</button>
+  <button id="discard-autosave">Discard</button>
+</div>
+
+<div class="main">
+
+  <div class="mode-bar">
+    <button id="mode-page" class="mode-btn active">▣ Page mode</button>
+    <button id="mode-thumb" class="mode-btn">▦ Thumbnail mode</button>
+    <span id="mode-hint" class="mode-hint">Visual layout above, script below</span>
+  </div>
+
+  <!-- Page-mode toolbar -->
+  <div id="page-toolbar" class="toolbar">
+    <select id="template-select" style="width: 160px;">
+      <option value="">+ Panel template…</option>
+      <option value="splash">Splash (1)</option>
+      <option value="2tier">2-tier (2)</option>
+      <option value="3tier">3-tier wide (3)</option>
+      <option value="4grid">4-grid (4)</option>
+      <option value="6std">6-panel standard</option>
+      <option value="9grid">9-grid (Watchmen)</option>
+      <option value="splash-bottom">Splash + 3 below</option>
+      <option value="hero-top">Hero + 4 below</option>
+    </select>
+    <span class="divider"></span>
+    <button data-add="panel">+ Panel</button>
+    <button data-add="bubble">+ Speech</button>
+    <button data-add="thought">+ Thought</button>
+    <button data-add="caption">+ Caption</button>
+    <button data-add="sfx">+ SFX</button>
+    <button data-add="image">+ Image</button>
+    <input type="file" id="image-input" accept="image/*" style="display:none;" />
+    <span style="flex:1;"></span>
+    <button id="undo-btn" title="Undo (Ctrl/Cmd+Z)">↶ Undo</button>
+    <button id="redo-btn" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
+    <span class="divider"></span>
+    <button id="compile-script" title="Compile full script across all pages">⎘ Compile script</button>
+    <button id="toggle-spread" title="Toggle 2-page spread view">▥ Spread</button>
+    <button id="export-pdf" class="primary" title="Export PDF">↓ PDF</button>
+    <button id="save-project" title="Save project as .json file">↓ Save</button>
+    <button id="load-project" title="Load project .json file">↑ Load</button>
+    <input type="file" id="load-input" accept="application/json" style="display:none;" />
+  </div>
+
+  <!-- Thumb-mode toolbar -->
+  <div id="thumb-toolbar" class="toolbar" style="display: none;">
+    <span style="color: var(--text-dim); font-size: 12px;">Quick block:</span>
+    <button class="quick-tpl" data-tpl="splash">Splash</button>
+    <button class="quick-tpl" data-tpl="2tier">2-tier</button>
+    <button class="quick-tpl" data-tpl="3tier">3-tier</button>
+    <button class="quick-tpl" data-tpl="4grid">4-grid</button>
+    <button class="quick-tpl" data-tpl="6std">6-panel</button>
+    <button class="quick-tpl" data-tpl="9grid">9-grid</button>
+    <button class="quick-tpl" data-tpl="splash-bottom">Splash+3</button>
+    <button class="quick-tpl" data-tpl="hero-top">Hero+4</button>
+    <button class="quick-tpl" data-tpl="clear" style="color: var(--danger);">Clear</button>
+    <span style="flex:1;"></span>
+    <span style="font-size: 11px; color: var(--text-faint); font-family: var(--mono);">Click page → click template</span>
+    <span class="divider"></span>
+    <span style="color: var(--text-dim); font-size: 12px;">Size:</span>
+    <input type="range" id="thumb-size" min="80" max="220" value="140" step="10" style="width: 90px;" />
+  </div>
+
+  <!-- Page mode -->
+  <div id="page-mode-wrap">
+
+    <div class="page-nav">
+      <button id="prev-page">‹ Prev</button>
+      <select id="page-select" style="width: 130px;"></select>
+      <button id="next-page">Next ›</button>
+      <input type="text" id="page-title" placeholder="Scene note (e.g. 'Fang reveals the gauge')" style="flex: 1; min-width: 180px;" />
+      <span class="divider"></span>
+      <button id="add-page" title="Add a new page after this one">+ Page</button>
+      <button id="remove-page" title="Remove current page">− Page</button>
+      <span id="page-count-label" style="font-size: 11px; color: var(--text-faint); font-family: var(--mono);"></span>
+      <span class="divider"></span>
+      <button id="duplicate-page" title="Duplicate current page">⎘ Dup</button>
+      <button id="delete-selected" title="Delete selected element">🗑 Del</button>
+    </div>
+
+    <div id="props" class="props"></div>
+
+    <div class="canvas-wrap">
+      <div class="pages-container">
+        <div id="page-left" class="page-board"></div>
+        <div id="page-right" class="page-board" style="display: none;"></div>
+      </div>
+
+      <div id="script-section" class="script-section">
+        <div class="script-divider">
+          <span class="line"></span>
+          <span>SCRIPT — PAGE <span id="script-page-display">01</span></span>
+          <span class="line"></span>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label class="script-direction-label">PAGE-LEVEL DIRECTION</label>
+          <textarea id="page-direction" class="direction" placeholder="Overall mood, lighting, recurring motifs for this whole page..."></textarea>
+        </div>
+        <div id="panel-scripts"></div>
+        <div id="empty-script-msg" class="empty-msg" style="display: none;">
+          Add panels to the page above — script entries will appear here automatically.
+        </div>
+      </div>
+    </div>
+
+    <div class="status-row">
+      <span>Drag • corner handles resize • top handle rotates • dbl-click text opens editor • Ctrl/Cmd+Z undo</span>
+      <span id="status"></span>
+    </div>
+
+    <div class="overview-section">
+      <div class="overview-label">▦ All pages</div>
+      <div id="overview" class="overview"></div>
+    </div>
+  </div>
+
+  <!-- Thumbnail mode -->
+  <div id="thumb-mode-wrap" class="tmode-wrap">
+    <div id="thumb-grid" class="tmode-grid"></div>
+    <div class="status-row">
+      <span>Click page • dbl-click → page mode • drag panels • dbl-click panel deletes • yellow tint = scripted</span>
+      <span id="thumb-status"></span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Help Modal -->
+<div id="help-modal" class="modal-backdrop">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('help-modal').classList.remove('open')">✕</button>
+    <h2>Comic Blocker</h2>
+    <div class="modal-tagline">Block your comic before you draw it.</div>
+    <p>A layout tool for comics writers. Block your panels visually, write your panel-by-panel script underneath, export the whole thing as PDF or compile a clean text script.</p>
+
+    <h3>Two Modes</h3>
+    <ul>
+      <li><strong>The Incredible Tutorial</strong> — open <strong>New / Tutorial</strong> to load a six-page guided comic that teaches the tool using the tool.</li>
+      <li><strong>Page mode</strong> — work on one page at a time with full controls. The visual layout sits at top; the panel-by-panel script lives below the page.</li>
+      <li><strong>Thumbnail mode</strong> — see all your pages at once. Block multiple pages quickly with one-click templates. Drag to nudge panels. Dbl-click a page to jump back to Page mode.</li>
+    </ul>
+
+    <h3>Adding Elements</h3>
+    <ul>
+      <li><strong>+ Panel</strong> — the boxes themselves. The visual frames.</li>
+      <li><strong>+ Speech / Thought</strong> — dialogue bubbles. Add a tail from the properties panel after selecting one.</li>
+      <li><strong>+ Caption</strong> — narrator boxes ("Meanwhile...", "Three years later...").</li>
+      <li><strong>+ SFX</strong> — sound effect lettering (BOOM, KRAK, etc).</li>
+      <li><strong>+ Image</strong> — drop in reference art or photo studies.</li>
+      <li><strong>Panel templates</strong> — the dropdown drops a pre-made grid (splash, 6-panel, 9-grid Watchmen-style, etc).</li>
+    </ul>
+
+    <h3>Manipulating</h3>
+    <ul>
+      <li>Click any element to select it.</li>
+      <li>Drag to move. Drag the blue corner handles to resize.</li>
+      <li>Drag the green handle (above the selection) to rotate.</li>
+      <li>Dbl-click any text element to open a larger editor for bubbles, captions, and SFX.</li>
+      <li>Dbl-click a panel to jump to its script entry below.</li>
+      <li>Press <kbd>Del</kbd> or <kbd>Backspace</kbd> to remove a selected element.</li>
+      <li>Use <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Z</kbd> for undo and <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> for redo.</li>
+    </ul>
+
+    <h3>Writing the Script</h3>
+    <p>Below each page, every panel gets a numbered script entry. Write what's happening in that panel — camera angle, action, mood. Plus a "Page-Level Direction" field at the top for stuff that applies to the whole page (lighting, motifs, etc).</p>
+    <p>Click the yellow PANEL # badge in any script entry to highlight that panel on the page above.</p>
+
+    <h3>Pages</h3>
+    <ul>
+      <li><strong>+ Page / − Page</strong> — add or remove pages. Default is 24 (single floppy), can grow up to 200 (full graphic novel). Removing a populated page asks for confirmation.</li>
+      <li><strong>Dup</strong> — copy the current page (and its script) to a new page after it. Great for keeping a consistent grid.</li>
+      <li><strong>Spread</strong> — toggle two-page facing-spread view (read-only on the right; edit on the left).</li>
+    </ul>
+
+    <h3>Saving & Exporting</h3>
+    <ul>
+      <li><strong>Save</strong> — downloads your project as a <code>.json</code> file. Keep it on your computer like any other document.</li>
+      <li><strong>Load</strong> — loads a previously saved <code>.json</code> back into the tool.</li>
+      <li><strong>Autosave recovery</strong> — the browser keeps a local recovery copy while you work. Your manual <code>.json</code> is still the source of truth.</li>
+      <li><strong>PDF</strong> — exports all pages as a multi-page PDF. Each page in the PDF includes the visual at top and the full script underneath. Send to your artist or print for reference.</li>
+      <li><strong>Compile script</strong> — generates a clean text script (Marvel-style) of the whole comic and downloads it as a <code>.txt</code>. Includes all panel descriptions plus dialogue/captions/SFX. This is what you'd hand to a collaborator if they only need the words.</li>
+    </ul>
+
+    <p style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-faint);">Built by a writer, for writers. Your work stays on your machine — nothing uploads anywhere. If this tool helps you, consider <a href="https://ko-fi.com/deptappliedmagic" target="_blank" rel="noopener" style="color: #FF5E5B;">buying me a coffee</a> — keeps this project alive and free.</p>
+  </div>
+</div>
+
+<div id="text-editor-modal" class="modal-backdrop">
+  <div class="modal" style="max-width: 560px;">
+    <button id="text-editor-close" class="modal-close">✕</button>
+    <h2>Edit Text</h2>
+    <div class="modal-tagline">Roomy drafting space for bubbles, captions, and SFX.</div>
+    <div class="text-editor-panel">
+      <textarea id="text-editor-input"></textarea>
+      <div class="text-editor-actions">
+        <button id="text-editor-cancel">Cancel</button>
+        <button id="text-editor-save" class="primary">Save text</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="start-modal" class="modal-backdrop">
+  <div class="modal" style="max-width: 760px;">
+    <button id="start-close" class="modal-close">✕</button>
+    <h2>Comic Blocker</h2>
+    <div class="modal-tagline">Pick your opening panel.</div>
+    <p>Start blank, load an existing project, or jump into the built-in tutorial comic. Everything stays on your machine unless you choose to export or download it.</p>
+    <div class="start-grid">
+      <button id="start-tutorial" class="start-card primary-card">
+        <strong>The Incredible Tutorial!</strong>
+        <span>A six-page, comic-y guided tour that uses panels, captions, bubbles, SFX, thumbnail pacing, and exports.</span>
+      </button>
+      <button id="start-blank-24" class="start-card">
+        <strong>Blank 24-Page Comic</strong>
+        <span>The classic single-issue starting point, seeded with a six-panel first page.</span>
+      </button>
+      <button id="start-blank-8" class="start-card">
+        <strong>Blank 8-Page Short</strong>
+        <span>A tighter sandbox for anthology shorts, tests, and quick ideas.</span>
+      </button>
+      <button id="start-load" class="start-card">
+        <strong>Load Project File</strong>
+        <span>Open a previously downloaded Comic Blocker JSON project.</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  const PAGE_W = 660, PAGE_H = 1000;
+  const DEFAULT_PAGES = 24;
+  const MAX_PAGES = 200;
+  const MIN_PAGES = 1;
+
+  let pages = Array.from({length: DEFAULT_PAGES}, ()=>({
+    title: '',
+    pageDirection: '',
+    panelScripts: {},
+    elements: []
+  }));
+  let currentPage = 0;
+  let selectedId = null;
+  let elIdCounter = 1;
+  let spreadView = false;
+  let mode = 'page';
+  let selectedThumbPage = null;
+  let thumbSize = 140;
+  let historyPast = [];
+  let historyFuture = [];
+  let lastSavedAt = 0;
+  let lastAutosaveAt = 0;
+  let autosaveTimer = null;
+  let textEditorElId = null;
+  let projectMeta = { title: '', author: '' };
+  const HISTORY_LIMIT = 50;
+  const AUTOSAVE_KEY = 'comic-blocker-autosave-v1';
+  const START_SEEN_KEY = 'comic-blocker-start-seen-v1';
+
+  const FONT_PRESETS = {
+    Dialogue: { family: "'Comic Sans MS', 'Marker Felt', cursive", size: 14, weight: 500 },
+    Caption:  { family: "Georgia, serif", size: 13, weight: 400, italic: true },
+    SFX:      { family: "'Impact', 'Arial Black', sans-serif", size: 28, weight: 700, italic: true },
+    Note:     { family: "ui-monospace, monospace", size: 12, weight: 400 }
+  };
+
+  const COLOR_SWATCHES = [
+    {name:'White',  bg:'#FFFFFF', fg:'#1a1a1a', border:'#1a1a1a'},
+    {name:'Cream',  bg:'#FAEEDA', fg:'#2C2C2A', border:'#1a1a1a'},
+    {name:'Black',  bg:'#1a1a1a', fg:'#FFFFFF', border:'#1a1a1a'},
+    {name:'Yellow', bg:'#FAC775', fg:'#412402', border:'#1a1a1a'},
+    {name:'Red',    bg:'#F7C1C1', fg:'#501313', border:'#A32D2D'},
+    {name:'Blue',   bg:'#B5D4F4', fg:'#042C53', border:'#185FA5'},
+    {name:'Green',  bg:'#C0DD97', fg:'#173404', border:'#3B6D11'},
+    {name:'Pink',   bg:'#F4C0D1', fg:'#4B1528', border:'#993556'}
+  ];
+
+  const TEMPLATES = {
+    'splash':       [[20,20,620,960]],
+    '2tier':        [[20,20,620,470], [20,510,620,470]],
+    '3tier':        [[20,20,620,310], [20,345,620,310], [20,670,620,310]],
+    '4grid':        [[20,20,300,470], [340,20,300,470], [20,510,300,470], [340,510,300,470]],
+    '6std':         [[20,20,300,310], [340,20,300,310], [20,345,300,310], [340,345,300,310], [20,670,300,310], [340,670,300,310]],
+    '9grid':        [[20,20,200,310], [230,20,200,310], [440,20,200,310], [20,345,200,310], [230,345,200,310], [440,345,200,310], [20,670,200,310], [230,670,200,310], [440,670,200,310]],
+    'splash-bottom':[[20,20,620,560], [20,600,200,380], [230,600,200,380], [440,600,200,380]],
+    'hero-top':     [[20,20,620,460], [20,500,300,220], [340,500,300,220], [20,740,300,240], [340,740,300,240]]
+  };
+
+  const TUTORIAL_PROJECT = {
+  "pages": [
+    {
+      "title": "The Incredible Comic Blocker Tutorial!",
+      "pageDirection": "TITLE PAGE: A credits/info-page style tutorial cover built only with Comic Blocker elements. The writer can remix this page by dragging, resizing, recoloring, and rewriting every piece.",
+      "panelScripts": {
+        "el-1": "PANEL 1: A full-page intro/credits page. It borrows the energy of a classic comic recap page without using artwork: big title, dense copy, credits boxes, and a right-side stack of feature callouts."
+      },
+      "elements": [
+        {
+          "id": "el-1",
+          "type": "panel",
+          "w": 620,
+          "h": 960,
+          "x": 20,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-2",
+          "type": "caption",
+          "w": 400,
+          "h": 420,
+          "x": 42,
+          "y": 42,
+          "rotation": 0,
+          "swatch": 2,
+          "borderWidth": 0,
+          "text": "",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 12
+        },
+        {
+          "id": "el-3",
+          "type": "caption",
+          "w": 172,
+          "h": 840,
+          "x": 455,
+          "y": 78,
+          "rotation": 2,
+          "swatch": 7,
+          "borderWidth": 1,
+          "text": "",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 12
+        },
+        {
+          "id": "el-4",
+          "type": "caption",
+          "w": 118,
+          "h": 52,
+          "x": 470,
+          "y": 55,
+          "rotation": -7,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "NEW!",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 24
+        },
+        {
+          "id": "el-5",
+          "type": "caption",
+          "w": 158,
+          "h": 169,
+          "x": 72,
+          "y": 76,
+          "rotation": 0,
+          "swatch": 2,
+          "borderWidth": 0,
+          "text": "BORN FROM AN ABUNDANCE OF COFFEE, NOTEBOOK SCRIBBLES, A-HA’S IN THE SHOWER, AND THE TERRIBLE NEED TO SEE A STORY BEFORE WRITING AND DRAWING IT, COMIC BLOCKER GIVES WRITERS A PLACE TO PLAN THE PAGE FREELY!",
+          "font": "Note",
+          "z": 1779416318421,
+          "fontSize": 11
+        },
+        {
+          "id": "el-6",
+          "type": "sfx",
+          "w": 82,
+          "h": 42,
+          "x": 233,
+          "y": 73,
+          "rotation": 0,
+          "swatch": 0,
+          "text": "THE",
+          "font": "SFX",
+          "sfxColor": "#FFFFFF",
+          "z": 1779416306700,
+          "fontSize": 28
+        },
+        {
+          "id": "el-7",
+          "type": "sfx",
+          "w": 180,
+          "h": 54,
+          "x": 234,
+          "y": 97,
+          "rotation": 0,
+          "swatch": 0,
+          "text": "INCREDIBLE",
+          "font": "SFX",
+          "sfxColor": "#FFFFFF",
+          "z": 1779416302761,
+          "fontSize": 34
+        },
+        {
+          "id": "el-8",
+          "type": "sfx",
+          "w": 207,
+          "h": 74,
+          "x": 213,
+          "y": 129,
+          "rotation": -4,
+          "swatch": 0,
+          "text": "COMIC",
+          "font": "SFX",
+          "sfxColor": "#4EA1F5",
+          "z": 1779416309522,
+          "fontSize": 46
+        },
+        {
+          "id": "el-9",
+          "type": "sfx",
+          "w": 154,
+          "h": 52,
+          "x": 243,
+          "y": 180,
+          "rotation": -4,
+          "swatch": 0,
+          "text": "BLOCKER",
+          "font": "SFX",
+          "sfxColor": "#4EA1F5",
+          "z": 1779416311536,
+          "fontSize": 33
+        },
+        {
+          "id": "el-10",
+          "type": "caption",
+          "w": 320,
+          "h": 144,
+          "x": 82,
+          "y": 270,
+          "rotation": 0,
+          "swatch": 2,
+          "borderWidth": 0,
+          "text": "Within these pages, fearless creator, you will learn to summon panels, command captions, fire speech bubbles across the page, unleash SFX, write scripts beneath each beat, and escape with a downloadable project file THAT MAKES YOU FEEL LIKE YOU MIGHT BE GOOD AT THIS WRITING THING!",
+          "font": "Dialogue",
+          "z": 1779416210075,
+          "fontSize": 14
+        },
+        {
+          "id": "el-11",
+          "type": "caption",
+          "w": 388,
+          "h": 36,
+          "x": 64,
+          "y": 474,
+          "rotation": 0,
+          "swatch": 5,
+          "borderWidth": 2,
+          "text": "“THE OVERLY DRAMATIC TUTORIAL”",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 17
+        },
+        {
+          "id": "el-12",
+          "type": "caption",
+          "w": 184,
+          "h": 132,
+          "x": 64,
+          "y": 540,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "STARRING YOU,\nSOME WRITER, THE\nFEARLESS STORY\nMACHINE",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 17
+        },
+        {
+          "id": "el-13",
+          "type": "caption",
+          "w": 184,
+          "h": 132,
+          "x": 266,
+          "y": 540,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "THE HERO ARTIST\nMAYBE?\nEVENTUALLY?",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 17
+        },
+        {
+          "id": "el-14",
+          "type": "caption",
+          "w": 184,
+          "h": 132,
+          "x": 64,
+          "y": 694,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "COLOR ARTIST AND\nTHE SWATCHES OF\nDESTINY",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 16
+        },
+        {
+          "id": "el-15",
+          "type": "caption",
+          "w": 184,
+          "h": 132,
+          "x": 266,
+          "y": 694,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "LETTERER BUBBLES,\nCAPTIONS, SFX!",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 16
+        },
+        {
+          "id": "el-16",
+          "type": "caption",
+          "w": 386,
+          "h": 72,
+          "x": 64,
+          "y": 855,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 2,
+          "text": "A FREE TOOL BUILT BY JOHN DALY (ROBOTSBYJD@GMAIL.COM)\nFOR HIS VERY DUMB STORY IDEAS AND FOR ANYONE ELSE\nLOOKING FOR SOMETHING TO HELP VISUALIZE SEQUENTIAL\nSTORYTELLING BETTER.",
+          "font": "Note",
+          "z": 1779416333940,
+          "fontSize": 11
+        },
+        {
+          "id": "el-17",
+          "type": "caption",
+          "w": 124,
+          "h": 30,
+          "x": 466,
+          "y": 132,
+          "rotation": -1,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "PANELS",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 14
+        },
+        {
+          "id": "el-18",
+          "type": "caption",
+          "w": 88,
+          "h": 50,
+          "x": 492,
+          "y": 218,
+          "rotation": 10,
+          "swatch": 5,
+          "borderWidth": 2,
+          "text": "",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 10
+        },
+        {
+          "id": "el-19",
+          "type": "caption",
+          "w": 128,
+          "h": 30,
+          "x": 470,
+          "y": 322,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "SCRIPT AREAS!",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 12
+        },
+        {
+          "id": "el-20",
+          "type": "caption",
+          "w": 82,
+          "h": 50,
+          "x": 486,
+          "y": 386,
+          "rotation": -9,
+          "swatch": 1,
+          "borderWidth": 2,
+          "text": "",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 10
+        },
+        {
+          "id": "el-21",
+          "type": "caption",
+          "w": 132,
+          "h": 30,
+          "x": 466,
+          "y": 474,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "BUBBLES!",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 14
+        },
+        {
+          "id": "el-22",
+          "type": "bubble",
+          "w": 98,
+          "h": 62,
+          "x": 488,
+          "y": 532,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 1.5,
+          "text": "HELLO!",
+          "font": "Dialogue",
+          "tail": null,
+          "z": 1779416210075,
+          "fontSize": 13
+        },
+        {
+          "id": "el-23",
+          "type": "caption",
+          "w": 134,
+          "h": 30,
+          "x": 464,
+          "y": 642,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "THUMBNAILS!",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 12
+        },
+        {
+          "id": "el-24",
+          "type": "caption",
+          "w": 92,
+          "h": 58,
+          "x": 486,
+          "y": 704,
+          "rotation": 8,
+          "swatch": 4,
+          "borderWidth": 2,
+          "text": "",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 10
+        },
+        {
+          "id": "el-25",
+          "type": "caption",
+          "w": 118,
+          "h": 30,
+          "x": 472,
+          "y": 812,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "EXPORTS",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 13
+        },
+        {
+          "id": "el-26",
+          "type": "sfx",
+          "w": 78,
+          "h": 54,
+          "x": 496,
+          "y": 860,
+          "rotation": -4,
+          "swatch": 0,
+          "text": "PDF!",
+          "font": "SFX",
+          "sfxColor": "#FFFFFF",
+          "z": 1779416210075,
+          "fontSize": 24
+        },
+        {
+          "id": "el-27",
+          "type": "caption",
+          "w": 132,
+          "h": 30,
+          "x": 466,
+          "y": 918,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "text": "START HERE",
+          "font": "SFX",
+          "z": 1779416210075,
+          "fontSize": 14
+        }
+      ]
+    },
+    {
+      "title": "Behold! The Mighty Panel!",
+      "pageDirection": "Use panels first. They are the page structure, camera rhythm, and pacing skeleton.",
+      "panelScripts": {
+        "el-28": "PANEL 1: A giant caption introduces panels as the mighty frames that contain story beats.",
+        "el-29": "PANEL 2: A speech bubble points out that each panel gets an automatic number.",
+        "el-30": "PANEL 3: A caption explains templates: splash, tiers, grids, and hero layouts.",
+        "el-31": "PANEL 4: The tutorial reminds the writer to drag, resize, and rotate. The page is a planning board, not a prison."
+      },
+      "elements": [
+        {
+          "id": "el-28",
+          "type": "panel",
+          "w": 620,
+          "h": 270,
+          "x": 20,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 2,
+          "z": 1779416406342
+        },
+        {
+          "id": "el-29",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 20,
+          "y": 315,
+          "rotation": 0,
+          "swatch": 5,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-30",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 340,
+          "y": 315,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-31",
+          "type": "panel",
+          "w": 620,
+          "h": 340,
+          "x": 20,
+          "y": 640,
+          "rotation": 0,
+          "swatch": 7,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-32",
+          "type": "caption",
+          "w": 502,
+          "h": 106,
+          "x": 78,
+          "y": 70,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 1,
+          "text": "FIRST FEATURE, summon the panel! Drop in a box for story beats, action call outs, scene descriptions, whatever. You can change border, color, size, and more!",
+          "font": "SFX",
+          "z": 1779416407678,
+          "fontSize": 20
+        },
+        {
+          "id": "el-33",
+          "type": "bubble",
+          "w": 190,
+          "h": 92,
+          "x": 72,
+          "y": 380,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 1.5,
+          "text": "We also have speech bubbles!",
+          "font": "Dialogue",
+          "tail": {
+            "x": 54,
+            "y": 349
+          },
+          "z": 1779416414485,
+          "fontSize": 14
+        },
+        {
+          "id": "el-34",
+          "type": "caption",
+          "w": 210,
+          "h": 110,
+          "x": 385,
+          "y": 382,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 1,
+          "text": "Panel templates are also available to drop instant page structures. Then you nudge them to your heart's content.",
+          "font": "Caption",
+          "z": 1779416432655,
+          "fontSize": 14
+        },
+        {
+          "id": "el-35",
+          "type": "sfx",
+          "w": 320,
+          "h": 90,
+          "x": 172,
+          "y": 735,
+          "rotation": -6,
+          "swatch": 0,
+          "text": "DRAG! RESIZE! ROTATE!\nALL AVAILABLE WITH THE SFX BUTTON",
+          "font": "SFX",
+          "sfxColor": "#A32D2D",
+          "z": 1779416453119,
+          "fontSize": 30
+        }
+      ]
+    },
+    {
+      "title": "Meanwhile, In The Script Zone...",
+      "pageDirection": "This tool is writer-first. The visual page stays clean; the actual script lives below each page.",
+      "panelScripts": {
+        "el-36": "PANEL 1: A writer stares at a blank panel. The script box below is where the scene description belongs.",
+        "el-37": "PANEL 2: The writer adds mood, camera, action, and intention. The panel itself stays uncluttered.",
+        "el-38": "PANEL 3: Page-level direction handles the whole page: color, tempo, lighting, motifs, and emotional weather.",
+        "el-39": "PANEL 4: Clicking a PANEL badge below selects the matching panel above.",
+        "el-40": "PANEL 5: Double-clicking a panel jumps down to its script entry. Zounds! Cross-links!"
+      },
+      "elements": [
+        {
+          "id": "el-36",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 20,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-37",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 340,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 7,
+          "borderWidth": 2,
+          "z": 1779416527299
+        },
+        {
+          "id": "el-38",
+          "type": "panel",
+          "w": 620,
+          "h": 285,
+          "x": 20,
+          "y": 345,
+          "rotation": 0,
+          "swatch": 5,
+          "borderWidth": 2,
+          "z": 1779416482283
+        },
+        {
+          "id": "el-39",
+          "type": "panel",
+          "w": 300,
+          "h": 325,
+          "x": 20,
+          "y": 655,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-40",
+          "type": "panel",
+          "w": 300,
+          "h": 325,
+          "x": 340,
+          "y": 655,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-41",
+          "type": "caption",
+          "w": 245,
+          "h": 86,
+          "x": 45,
+          "y": 78,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 1,
+          "text": "The panel shows the beat. The script below tells the artist what happens.",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 14
+        },
+        {
+          "id": "el-43",
+          "type": "caption",
+          "w": 425,
+          "h": 90,
+          "x": 118,
+          "y": 432,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 1,
+          "text": "PAGE-LEVEL DIRECTION MAYBE FOR YOUR OWN NOTES?: “This whole page feels cold, cramped, and really boring for a tutorial.”",
+          "font": "Caption",
+          "z": 1779416484101,
+          "fontSize": 15
+        },
+        {
+          "id": "el-44",
+          "type": "sfx",
+          "w": 185,
+          "h": 70,
+          "x": 70,
+          "y": 790,
+          "rotation": -8,
+          "swatch": 0,
+          "text": "CLICK!",
+          "font": "SFX",
+          "sfxColor": "#185FA5",
+          "z": 1779416210075,
+          "fontSize": 30
+        },
+        {
+          "id": "el-45",
+          "type": "sfx",
+          "w": 185,
+          "h": 70,
+          "x": 405,
+          "y": 792,
+          "rotation": 7,
+          "swatch": 0,
+          "text": "JUMP!",
+          "font": "SFX",
+          "sfxColor": "#BA7517",
+          "z": 1779416210075,
+          "fontSize": 30
+        },
+        {
+          "id": "el-77",
+          "type": "thought",
+          "w": 234,
+          "h": 116,
+          "x": 373,
+          "y": 53,
+          "rotation": -1,
+          "swatch": 0,
+          "borderWidth": 1.5,
+          "text": "These thought bubbles can be moved around and the thought trace has its own unique handle.",
+          "font": "Dialogue",
+          "tail": {
+            "x": 384,
+            "y": 250
+          },
+          "z": 1779416528832
+        }
+      ]
+    },
+    {
+      "title": "Dialogue Descends From The Heavens!",
+      "pageDirection": "Lettering elements are for what the reader will eventually see: bubbles, captions, thoughts, and sound effects.",
+      "panelScripts": {
+        "el-46": "PANEL 1: Speech bubbles can point to an imaginary speaker with a draggable tail.",
+        "el-47": "PANEL 2: Thought bubbles get a dot-chain tail for internal monologue.",
+        "el-48": "PANEL 3: Captions carry narration, time jumps, and ominous declarations.",
+        "el-49": "PANEL 4: SFX can be tilted and resized for maximum comic-book kablam.",
+        "el-50": "PANEL 5: Select any text element to change color, font role, size, rotation, border, and layer order."
+      },
+      "elements": [
+        {
+          "id": "el-46",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 20,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 5,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-47",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 340,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-48",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 20,
+          "y": 345,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-49",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 340,
+          "y": 345,
+          "rotation": 0,
+          "swatch": 7,
+          "borderWidth": 2,
+          "z": 1779416589072
+        },
+        {
+          "id": "el-50",
+          "type": "panel",
+          "w": 620,
+          "h": 310,
+          "x": 20,
+          "y": 670,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-51",
+          "type": "bubble",
+          "w": 175,
+          "h": 92,
+          "x": 70,
+          "y": 95,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 1.5,
+          "text": "Speech bubbles speak with purpose!",
+          "font": "Dialogue",
+          "tail": {
+            "x": 226,
+            "y": 234
+          },
+          "z": 1779416210075,
+          "fontSize": 14
+        },
+        {
+          "id": "el-52",
+          "type": "thought",
+          "w": 190,
+          "h": 100,
+          "x": 395,
+          "y": 88,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 1.5,
+          "text": "Thought bubbles ponder dramatically...",
+          "font": "Dialogue",
+          "tail": {
+            "x": 430,
+            "y": 232
+          },
+          "z": 1779416210075,
+          "fontSize": 14
+        },
+        {
+          "id": "el-53",
+          "type": "caption",
+          "w": 235,
+          "h": 88,
+          "x": 52,
+          "y": 420,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 1,
+          "text": "CAPTIONS announce the dreadful turn of fate.",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 14
+        },
+        {
+          "id": "el-54",
+          "type": "sfx",
+          "w": 205,
+          "h": 95,
+          "x": 390,
+          "y": 430,
+          "rotation": -9,
+          "swatch": 0,
+          "text": "KRAK-A-DOOM!",
+          "font": "SFX",
+          "sfxColor": "#A32D2D",
+          "z": 1779416590006,
+          "fontSize": 56
+        },
+        {
+          "id": "el-55",
+          "type": "caption",
+          "w": 488,
+          "h": 86,
+          "x": 86,
+          "y": 750,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 1,
+          "text": "Double-click text for a roomy editor. Select it for font size, color, rotation, and other mighty controls.",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 15
+        }
+      ]
+    },
+    {
+      "title": "The Thumbnail Dimension!",
+      "pageDirection": "Thumbnail mode is for pacing. Zoom out and see whether the whole story breathes.",
+      "panelScripts": {
+        "el-56": "PANEL 1: Dense grid. Lots of story pressure.",
+        "el-57": "PANEL 2: Dense grid. The reader is moving fast.",
+        "el-58": "PANEL 3: Dense grid. Momentum builds.",
+        "el-59": "PANEL 4: A wide panel gives the page a breath.",
+        "el-60": "PANEL 5: Thumbnail mode lets the writer compare page shapes across the whole issue.",
+        "el-61": "PANEL 6: Yellow tint shows scripted panels, so progress is visible at a glance."
+      },
+      "elements": [
+        {
+          "id": "el-56",
+          "type": "panel",
+          "w": 200,
+          "h": 310,
+          "x": 20,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 7,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-57",
+          "type": "panel",
+          "w": 200,
+          "h": 310,
+          "x": 230,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-58",
+          "type": "panel",
+          "w": 200,
+          "h": 310,
+          "x": 440,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 5,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-59",
+          "type": "panel",
+          "w": 620,
+          "h": 290,
+          "x": 20,
+          "y": 355,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-60",
+          "type": "panel",
+          "w": 300,
+          "h": 310,
+          "x": 20,
+          "y": 670,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-61",
+          "type": "panel",
+          "w": 300,
+          "h": 310,
+          "x": 340,
+          "y": 670,
+          "rotation": 0,
+          "swatch": 7,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-62",
+          "type": "sfx",
+          "w": 125,
+          "h": 60,
+          "x": 62,
+          "y": 110,
+          "rotation": -8,
+          "swatch": 0,
+          "text": "DENSE!",
+          "font": "SFX",
+          "sfxColor": "#A32D2D",
+          "z": 1779416210075,
+          "fontSize": 20
+        },
+        {
+          "id": "el-63",
+          "type": "sfx",
+          "w": 125,
+          "h": 60,
+          "x": 265,
+          "y": 110,
+          "rotation": -8,
+          "swatch": 0,
+          "text": "FAST!",
+          "font": "SFX",
+          "sfxColor": "#185FA5",
+          "z": 1779416210075,
+          "fontSize": 22
+        },
+        {
+          "id": "el-64",
+          "type": "sfx",
+          "w": 125,
+          "h": 60,
+          "x": 475,
+          "y": 110,
+          "rotation": 5,
+          "swatch": 0,
+          "text": "TENSE!",
+          "font": "SFX",
+          "sfxColor": "#993556",
+          "z": 1779416210075,
+          "fontSize": 20
+        },
+        {
+          "id": "el-65",
+          "type": "caption",
+          "w": 330,
+          "h": 76,
+          "x": 165,
+          "y": 452,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 1,
+          "text": "Then: one wide beat. The page breathes. The pacing changes.",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 15
+        },
+        {
+          "id": "el-66",
+          "type": "bubble",
+          "w": 185,
+          "h": 96,
+          "x": 74,
+          "y": 748,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 1.5,
+          "text": "Hit Thumbnail mode to see the whole adventure!",
+          "font": "Dialogue",
+          "tail": {
+            "x": 220,
+            "y": 890
+          },
+          "z": 1779416210075,
+          "fontSize": 13
+        },
+        {
+          "id": "el-67",
+          "type": "caption",
+          "w": 210,
+          "h": 92,
+          "x": 386,
+          "y": 750,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 1,
+          "text": "Scripted panels glow yellow in the overview. Progress, revealed!",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 13
+        }
+      ]
+    },
+    {
+      "title": "Save, Export, And Live To Draft Another Day!",
+      "pageDirection": "The final page teaches the survival kit: autosave recovery, JSON downloads, PDF export, and compile script.",
+      "panelScripts": {
+        "el-68": "PANEL 1: Save downloads a JSON project file. That is the portable master copy.",
+        "el-69": "PANEL 2: Autosave recovery helps if the browser closes before the writer downloads a project file.",
+        "el-70": "PANEL 3: PDF export makes a collaborator-friendly packet: visual layout plus script.",
+        "el-71": "PANEL 4: Compile Script creates a clean text document. The writer rides into the sunset, draft intact."
+      },
+      "elements": [
+        {
+          "id": "el-68",
+          "type": "panel",
+          "w": 620,
+          "h": 250,
+          "x": 20,
+          "y": 20,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-69",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 20,
+          "y": 295,
+          "rotation": 0,
+          "swatch": 5,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-70",
+          "type": "panel",
+          "w": 300,
+          "h": 300,
+          "x": 340,
+          "y": 295,
+          "rotation": 0,
+          "swatch": 7,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-71",
+          "type": "panel",
+          "w": 620,
+          "h": 360,
+          "x": 20,
+          "y": 620,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 2,
+          "z": 1779416210075
+        },
+        {
+          "id": "el-72",
+          "type": "caption",
+          "w": 500,
+          "h": 78,
+          "x": 82,
+          "y": 86,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 1,
+          "text": "SAVE downloads your project file. Keep it like the secret identity of your comic.",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 16
+        },
+        {
+          "id": "el-73",
+          "type": "bubble",
+          "w": 190,
+          "h": 92,
+          "x": 72,
+          "y": 382,
+          "rotation": 0,
+          "swatch": 0,
+          "borderWidth": 1.5,
+          "text": "Browser crash? Autosave may swoop in!",
+          "font": "Dialogue",
+          "tail": {
+            "x": 222,
+            "y": 520
+          },
+          "z": 1779416210075,
+          "fontSize": 14
+        },
+        {
+          "id": "el-74",
+          "type": "caption",
+          "w": 210,
+          "h": 92,
+          "x": 385,
+          "y": 376,
+          "rotation": 0,
+          "swatch": 1,
+          "borderWidth": 1,
+          "text": "PDF export packages the page layouts with their scripts underneath.",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 13
+        },
+        {
+          "id": "el-75",
+          "type": "sfx",
+          "w": 350,
+          "h": 95,
+          "x": 160,
+          "y": 725,
+          "rotation": -3,
+          "swatch": 0,
+          "text": "DRAFT SAVED!",
+          "font": "SFX",
+          "sfxColor": "#0F6E56",
+          "z": 1779416210075,
+          "fontSize": 40
+        },
+        {
+          "id": "el-76",
+          "type": "caption",
+          "w": 440,
+          "h": 72,
+          "x": 110,
+          "y": 850,
+          "rotation": 0,
+          "swatch": 3,
+          "borderWidth": 1,
+          "text": "Now go block the comic before the idea escapes into the night!",
+          "font": "Caption",
+          "z": 1779416210075,
+          "fontSize": 16
+        }
+      ]
+    }
+  ],
+  "projectMeta": {
+    "title": "The Incredible Comic Blocker Tutorial",
+    "author": "Dept. of Applied Magic"
+  },
+  "version": 8,
+  "savedAt": 1779416617762
+};
+
+  const $ = id => document.getElementById(id);
+  const pageLeft = $('page-left');
+  const pageRight = $('page-right');
+  const overviewEl = $('overview');
+  const pageSelect = $('page-select');
+  const pageTitle = $('page-title');
+  const status = $('status');
+  const propsEl = $('props');
+  const panelScriptsEl = $('panel-scripts');
+  const emptyScriptMsg = $('empty-script-msg');
+  const pageDirectionEl = $('page-direction');
+  const scriptPageDisplay = $('script-page-display');
+  const thumbGrid = $('thumb-grid');
+  const thumbStatus = $('thumb-status');
+  const pageCountLabel = $('page-count-label');
+  const toast = $('toast');
+  const recoveryBanner = $('recovery-banner');
+  const textEditorModal = $('text-editor-modal');
+  const textEditorInput = $('text-editor-input');
+  const startModal = $('start-modal');
+  const projectTitleInput = $('project-title');
+  const projectAuthorInput = $('project-author');
+
+  function showToast(msg, ms=2000){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>{ toast.classList.remove('show'); }, ms);
+  }
+
+  function uid(){ return 'el-' + (elIdCounter++); }
+
+  function getState(){
+    return {
+      pages: JSON.parse(JSON.stringify(pages)),
+      currentPage,
+      selectedId,
+      elIdCounter,
+      spreadView,
+      mode,
+      thumbSize,
+      projectMeta: JSON.parse(JSON.stringify(projectMeta))
+    };
+  }
+
+  function restoreState(state){
+    pages = JSON.parse(JSON.stringify(state.pages || []));
+    if(!pages.length){ pages = [{title:'', pageDirection:'', panelScripts:{}, elements:[]}]; }
+    currentPage = Math.max(0, Math.min(state.currentPage || 0, pages.length - 1));
+    selectedId = state.selectedId || null;
+    elIdCounter = state.elIdCounter || elIdCounter;
+    spreadView = !!state.spreadView;
+    mode = state.mode === 'thumb' ? 'thumb' : 'page';
+    thumbSize = state.thumbSize || thumbSize;
+    projectMeta = Object.assign({title:'', author:''}, state.projectMeta || {});
+    syncMetaInputs();
+    refreshPageSelect();
+    switchMode(mode, true);
+    render();
+    updateUndoRedoButtons();
+  }
+
+  function pushHistory(){
+    historyPast.push(getState());
+    if(historyPast.length > HISTORY_LIMIT){ historyPast.shift(); }
+    historyFuture = [];
+    updateUndoRedoButtons();
+  }
+
+  function markChanged(){
+    scheduleAutosave();
+  }
+
+  function updateUndoRedoButtons(){
+    const undo = $('undo-btn'), redo = $('redo-btn');
+    if(!undo || !redo) return;
+    undo.disabled = historyPast.length === 0;
+    redo.disabled = historyFuture.length === 0;
+  }
+
+  function undo(){
+    if(historyPast.length === 0) return;
+    historyFuture.push(getState());
+    const prev = historyPast.pop();
+    restoreState(prev);
+    markChanged();
+    showToast('Undone');
+  }
+
+  function redo(){
+    if(historyFuture.length === 0) return;
+    historyPast.push(getState());
+    const next = historyFuture.pop();
+    restoreState(next);
+    markChanged();
+    showToast('Redone');
+  }
+
+  function scheduleAutosave(){
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveAutosave, 700);
+  }
+
+  function saveAutosave(){
+    try {
+      const payload = JSON.stringify({pages, projectMeta, version: 8, savedAt: Date.now()});
+      localStorage.setItem(AUTOSAVE_KEY, payload);
+      lastAutosaveAt = Date.now();
+    } catch(err){
+      showToast('Autosave paused: project is too large for browser storage', 3500);
+    }
+  }
+
+  function checkAutosave(){
+    try {
+      const raw = localStorage.getItem(AUTOSAVE_KEY);
+      if(!raw) return;
+      const data = JSON.parse(raw);
+      if(!data.pages || !Array.isArray(data.pages)) return;
+      if(data.projectMeta){ projectMeta = Object.assign({title:'', author:''}, data.projectMeta); syncMetaInputs(); }
+      const savedAt = data.savedAt || 0;
+      if(savedAt <= lastSavedAt) return;
+      const dt = new Date(savedAt);
+      $('recovery-copy').textContent = 'Recovery save from ' + dt.toLocaleString() + '.';
+      recoveryBanner.classList.add('show');
+    } catch(err){}
+  }
+
+  function syncMetaInputs(){
+    projectTitleInput.value = projectMeta.title || '';
+    projectAuthorInput.value = projectMeta.author || '';
+  }
+
+  function refreshPageSelect(){
+    pageSelect.innerHTML = '';
+    for(let i=0;i<pages.length;i++){
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = 'Page ' + (i+1) + ' / ' + pages.length;
+      pageSelect.appendChild(opt);
+    }
+    pageSelect.value = currentPage;
+    pageCountLabel.textContent = pages.length + ' pages';
+  }
+
+  function makeElement(type, opts){
+    const defaults = {
+      panel:   {w: 280, h: 200, x: 30, y: 30, rotation: 0, swatch: 0, borderWidth: 2},
+      bubble:  {w: 140, h: 80, x: 60, y: 60, rotation: 0, swatch: 0, borderWidth: 1.5, text: 'Hello!', font:'Dialogue', tail: {x: 70, y: 110}},
+      thought: {w: 140, h: 90, x: 60, y: 60, rotation: 0, swatch: 0, borderWidth: 1.5, text: 'Hmm...', font:'Dialogue', tail: {x: 70, y: 120}},
+      caption: {w: 200, h: 50, x: 30, y: 30, rotation: 0, swatch: 1, borderWidth: 1, text: 'Meanwhile...', font:'Caption'},
+      sfx:     {w: 160, h: 60, x: 100, y: 100, rotation: -8, swatch: 0, text: 'BOOM!', font:'SFX', sfxColor:'#A32D2D'},
+      image:   {w: 200, h: 200, x: 50, y: 50, rotation: 0, swatch: 0, borderWidth: 1, src: ''}
+    };
+    const d = defaults[type];
+    return Object.assign({id: uid(), type, ...d, z: Date.now()}, opts||{});
+  }
+
+  function blankPage(){
+    return { title: '', pageDirection: '', panelScripts: {}, elements: [] };
+  }
+
+  function makePage(title, pageDirection){
+    return { title, pageDirection, panelScripts: {}, elements: [] };
+  }
+
+  function addTutorialElement(page, type, opts){
+    const el = makeElement(type, opts);
+    page.elements.push(el);
+    return el;
+  }
+
+  function addPanelWithScript(page, rect, script, opts){
+    const panel = addTutorialElement(page, 'panel', Object.assign({
+      x: rect[0], y: rect[1], w: rect[2], h: rect[3]
+    }, opts || {}));
+    page.panelScripts[panel.id] = script;
+    return panel;
+  }
+
+  function createBlankProject(count){
+    localStorage.removeItem(AUTOSAVE_KEY);
+    recoveryBanner.classList.remove('show');
+    pages = Array.from({length: count}, () => blankPage());
+    TEMPLATES['6std'].forEach(([x,y,w,h])=>{
+      pages[0].elements.push(makeElement('panel', {x,y,w,h}));
+    });
+    currentPage = 0;
+    selectedId = null;
+    projectMeta = { title: '', author: '' };
+    syncMetaInputs();
+    historyPast = [];
+    historyFuture = [];
+    refreshPageSelect();
+    switchMode('page', true);
+    render();
+    updateUndoRedoButtons();
+    markChanged();
+  }
+
+  function createTutorialProject(){
+    localStorage.removeItem(AUTOSAVE_KEY);
+    recoveryBanner.classList.remove('show');
+    const data = JSON.parse(JSON.stringify(TUTORIAL_PROJECT));
+    pages = (data.pages || []).map(p=>({
+      title: p.title || '',
+      pageDirection: p.pageDirection || '',
+      panelScripts: p.panelScripts || {},
+      elements: p.elements || []
+    }));
+    if(!pages.length){ pages = [blankPage()]; }
+    projectMeta = Object.assign({title:'', author:''}, data.projectMeta || {});
+    currentPage = 0;
+    selectedId = null;
+    let maxId = 0;
+    pages.forEach(p=>p.elements.forEach(el=>{
+      const m = (el.id||'').match(/el-(\d+)/);
+      if(m) maxId = Math.max(maxId, +m[1]);
+    }));
+    elIdCounter = maxId + 1;
+    syncMetaInputs();
+    historyPast = [];
+    historyFuture = [];
+    refreshPageSelect();
+    switchMode('page', true);
+    render();
+    updateUndoRedoButtons();
+    markChanged();
+  }
+
+  function getOrderedPanels(pageIdx){
+    const page = pages[pageIdx];
+    const panels = page.elements.filter(e=>e.type==='panel').slice();
+    panels.sort((a,b)=>{
+      const rowA = Math.floor(a.y/80), rowB = Math.floor(b.y/80);
+      if(rowA !== rowB) return rowA - rowB;
+      return a.x - b.x;
+    });
+    return panels;
+  }
+
+  function applyElementStyle(node, el){
+    const sw = COLOR_SWATCHES[el.swatch || 0];
+    if(el.type === 'sfx'){
+      node.style.color = el.sfxColor || '#A32D2D';
+      const f = FONT_PRESETS[el.font || 'SFX'];
+      node.style.fontFamily = f.family;
+      node.style.fontSize = (el.fontSize || f.size) + 'px';
+      node.style.fontWeight = f.weight;
+      if(f.italic) node.style.fontStyle = 'italic';
+    } else if(el.type === 'image'){
+      node.style.borderColor = sw.border;
+      node.style.borderStyle = 'solid';
+      node.style.borderWidth = (el.borderWidth || 1) + 'px';
+    } else {
+      node.style.background = sw.bg;
+      node.style.color = sw.fg;
+      node.style.borderColor = sw.border;
+      node.style.borderStyle = el.type === 'thought' ? 'dashed' : 'solid';
+      node.style.borderWidth = (el.borderWidth || 1) + 'px';
+      if(el.font){
+        const f = FONT_PRESETS[el.font];
+        if(f){
+          node.style.fontFamily = f.family;
+          node.style.fontSize = (el.fontSize || f.size) + 'px';
+          node.style.fontWeight = f.weight;
+          if(f.italic) node.style.fontStyle = 'italic';
+        }
+      }
+    }
+    if(el.rotation){ node.style.transform = 'rotate(' + el.rotation + 'deg)'; }
+  }
+
+  function renderTail(boardEl, el, isSelected){
+    if(!el.tail) return;
+    const sw = COLOR_SWATCHES[el.swatch || 0];
+    const cx = el.x + el.w/2, cy = el.y + el.h/2;
+    const tx = el.tail.x, ty = el.tail.y;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'cmc-tail');
+    svg.style.left = '0'; svg.style.top = '0';
+    svg.style.width = PAGE_W + 'px'; svg.style.height = PAGE_H + 'px';
+    svg.setAttribute('viewBox', `0 0 ${PAGE_W} ${PAGE_H}`);
+    if(el.type === 'bubble'){
+      const ang = Math.atan2(ty-cy, tx-cx);
+      const ax = cx + Math.cos(ang+0.35)*(el.w/2-4);
+      const ay = cy + Math.sin(ang+0.35)*(el.h/2-4);
+      const bx = cx + Math.cos(ang-0.35)*(el.w/2-4);
+      const by = cy + Math.sin(ang-0.35)*(el.h/2-4);
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${ax} ${ay} L ${tx} ${ty} L ${bx} ${by} Z`);
+      path.setAttribute('fill', sw.bg); path.setAttribute('stroke', sw.border);
+      path.setAttribute('stroke-width', el.borderWidth || 1.5);
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+      const mask = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const ax2 = cx + Math.cos(ang+0.32)*(el.w/2-1);
+      const ay2 = cy + Math.sin(ang+0.32)*(el.h/2-1);
+      const bx2 = cx + Math.cos(ang-0.32)*(el.w/2-1);
+      const by2 = cy + Math.sin(ang-0.32)*(el.h/2-1);
+      mask.setAttribute('d', `M ${ax2} ${ay2} L ${bx2} ${by2}`);
+      mask.setAttribute('stroke', sw.bg); mask.setAttribute('stroke-width', '3'); mask.setAttribute('fill', 'none');
+      svg.appendChild(mask);
+    } else if(el.type === 'thought'){
+      const ang = Math.atan2(ty-cy, tx-cx);
+      const ex = cx + Math.cos(ang)*(el.w/2);
+      const ey = cy + Math.sin(ang)*(el.h/2);
+      const dist = Math.hypot(tx-ex, ty-ey);
+      const dots = Math.max(2, Math.min(5, Math.round(dist/18)));
+      for(let i=1; i<=dots; i++){
+        const t = i/(dots+1);
+        const px = ex + (tx-ex)*t, py = ey + (ty-ey)*t;
+        const r = 3 + i*1.2;
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', px); c.setAttribute('cy', py); c.setAttribute('r', r);
+        c.setAttribute('fill', sw.bg); c.setAttribute('stroke', sw.border);
+        c.setAttribute('stroke-width', el.borderWidth || 1.5);
+        svg.appendChild(c);
+      }
+    }
+    boardEl.appendChild(svg);
+    if(isSelected){
+      const handle = document.createElement('div');
+      handle.className = 'cmc-tail-handle';
+      handle.style.left = (tx-6)+'px'; handle.style.top = (ty-6)+'px';
+      handle.dataset.tailFor = el.id;
+      boardEl.appendChild(handle);
+    }
+  }
+
+  function renderPage(boardEl, pageIdx){
+    boardEl.innerHTML = '';
+    if(pageIdx >= pages.length) return;
+    const page = pages[pageIdx];
+    const els = page.elements.slice().sort((a,b)=>a.z-b.z);
+
+    els.forEach(el=>{
+      if(el.tail && (el.type === 'bubble' || el.type === 'thought')){
+        renderTail(boardEl, el, el.id === selectedId && pageIdx === currentPage);
+      }
+    });
+
+    const pn = document.createElement('div');
+    pn.style.cssText = 'position:absolute; bottom: 6px; left: 8px; font-size: 10px; color: #ccc; pointer-events: none; font-family: var(--mono);';
+    pn.textContent = pageIdx + 1;
+    boardEl.appendChild(pn);
+
+    const orderedPanels = getOrderedPanels(pageIdx);
+    const panelNumberMap = {};
+    orderedPanels.forEach((p, i)=>{ panelNumberMap[p.id] = i + 1; });
+
+    els.forEach(el=>{
+      const node = document.createElement('div');
+      node.className = 'cmc-el cmc-' + el.type;
+      node.dataset.id = el.id;
+      node.dataset.page = pageIdx;
+      node.style.left = el.x + 'px';
+      node.style.top = el.y + 'px';
+      node.style.width = el.w + 'px';
+      node.style.height = el.h + 'px';
+      node.style.zIndex = el.type === 'panel' ? 1 : el.type === 'image' ? 3 : 5;
+      applyElementStyle(node, el);
+
+      if(el.type === 'panel'){
+        const lbl = document.createElement('div');
+        lbl.className = 'cmc-panel-number';
+        lbl.textContent = panelNumberMap[el.id] || '?';
+        node.appendChild(lbl);
+        if(page.panelScripts[el.id] && page.panelScripts[el.id].trim()){
+          const sw = COLOR_SWATCHES[el.swatch||0];
+          if(sw.bg === '#FFFFFF'){ node.style.background = '#FFFCEB'; }
+        }
+      } else if(el.type === 'image'){
+        if(el.src){ node.style.backgroundImage = 'url(' + el.src + ')'; }
+        else { node.classList.add('cmc-image-empty'); node.textContent = 'Click to add image'; }
+      } else {
+        const txt = document.createElement('div');
+        txt.textContent = el.text || '';
+        txt.style.width = '100%';
+        node.appendChild(txt);
+      }
+
+      if(el.id === selectedId && pageIdx === currentPage){
+        node.classList.add('selected');
+        ['nw','ne','sw','se'].forEach(c=>{
+          const h = document.createElement('div');
+          h.className = 'cmc-handle ' + c;
+          h.dataset.corner = c;
+          node.appendChild(h);
+        });
+        const rh = document.createElement('div');
+        rh.className = 'cmc-handle rot';
+        rh.dataset.corner = 'rot';
+        node.appendChild(rh);
+      }
+      boardEl.appendChild(node);
+    });
+  }
+
+  function renderScriptSection(){
+    const page = pages[currentPage];
+    scriptPageDisplay.textContent = String(currentPage + 1).padStart(2, '0');
+    pageDirectionEl.value = page.pageDirection || '';
+    const panels = getOrderedPanels(currentPage);
+    panelScriptsEl.innerHTML = '';
+    if(panels.length === 0){ emptyScriptMsg.style.display = ''; return; }
+    emptyScriptMsg.style.display = 'none';
+    const validIds = new Set(panels.map(p=>p.id));
+    Object.keys(page.panelScripts).forEach(id=>{ if(!validIds.has(id)) delete page.panelScripts[id]; });
+
+    panels.forEach((panel, idx)=>{
+      const entry = document.createElement('div');
+      entry.className = 'panel-script-entry';
+      entry.dataset.panelId = panel.id;
+      if(panel.id === selectedId){ entry.classList.add('highlighted'); }
+
+      const numLabel = document.createElement('div');
+      numLabel.className = 'panel-script-num';
+      numLabel.textContent = 'PANEL ' + (idx + 1);
+      numLabel.title = 'Click to select this panel';
+      numLabel.onclick = ()=>{ selectedId = panel.id; render(); };
+      entry.appendChild(numLabel);
+
+      const textarea = document.createElement('textarea');
+      textarea.className = 'panel-script-text';
+      textarea.value = page.panelScripts[panel.id] || '';
+      textarea.placeholder = 'Describe the scene: camera angle, action, mood, characters, lighting...';
+      textarea.onfocus = ()=>{
+        if(textarea.dataset.historyStarted !== 'true'){
+          pushHistory();
+          textarea.dataset.historyStarted = 'true';
+        }
+      };
+      textarea.oninput = ()=>{
+        page.panelScripts[panel.id] = textarea.value;
+        markChanged();
+        const wasEmpty = (textarea.dataset.lastEmpty === 'true');
+        const isEmpty = !textarea.value.trim();
+        if(wasEmpty !== isEmpty){
+          textarea.dataset.lastEmpty = String(isEmpty);
+          renderPage(pageLeft, currentPage);
+          renderOverview();
+        }
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.max(50, textarea.scrollHeight) + 'px';
+      };
+      textarea.onblur = ()=>{ textarea.dataset.historyStarted = 'false'; };
+      textarea.dataset.lastEmpty = String(!textarea.value.trim());
+      entry.appendChild(textarea);
+
+      panelScriptsEl.appendChild(entry);
+      requestAnimationFrame(()=>{
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.max(50, textarea.scrollHeight) + 'px';
+      });
+    });
+  }
+
+  function render(){
+    if(mode === 'page'){
+      renderPage(pageLeft, currentPage);
+      if(spreadView && currentPage + 1 < pages.length){
+        pageRight.style.display = '';
+        renderPage(pageRight, currentPage + 1);
+      } else {
+        pageRight.style.display = 'none';
+      }
+      pageSelect.value = currentPage;
+      pageTitle.value = pages[currentPage].title;
+      renderProps();
+      renderScriptSection();
+      renderOverview();
+    } else {
+      renderThumbMode();
+    }
+  }
+
+  function renderOverview(){
+    overviewEl.innerHTML = '';
+    pages.forEach((p,idx)=>{
+      const t = document.createElement('div');
+      t.className = 'thumb' + (idx===currentPage?' active':'');
+      t.title = 'Page ' + (idx+1) + (p.title?' — '+p.title:'');
+      t.addEventListener('click', ()=>{ currentPage = idx; selectedId = null; render(); });
+      const num = document.createElement('div');
+      num.className = 'thumb-num';
+      num.textContent = idx+1;
+      t.appendChild(num);
+      p.elements.filter(e=>e.type==='panel').forEach(e=>{
+        const m = document.createElement('div');
+        m.className = 'thumb-shape';
+        m.style.left = (e.x/PAGE_W*100)+'%';
+        m.style.top = (e.y/PAGE_H*100)+'%';
+        m.style.width = (e.w/PAGE_W*100)+'%';
+        m.style.height = (e.h/PAGE_H*100)+'%';
+        const scripted = p.panelScripts[e.id] && p.panelScripts[e.id].trim();
+        m.style.background = scripted ? '#FFF4D6' : COLOR_SWATCHES[e.swatch||0].bg;
+        m.style.border = '1px solid #1a1a1a';
+        if(e.rotation) m.style.transform = 'rotate('+e.rotation+'deg)';
+        t.appendChild(m);
+      });
+      p.elements.filter(e=>['bubble','thought','caption','sfx'].includes(e.type)).forEach(e=>{
+        const m = document.createElement('div');
+        m.className = 'thumb-shape';
+        m.style.left = (e.x/PAGE_W*100)+'%';
+        m.style.top = (e.y/PAGE_H*100)+'%';
+        m.style.width = '4px'; m.style.height = '4px';
+        m.style.borderRadius = '50%';
+        m.style.background = e.type==='caption' ? '#BA7517' : e.type==='sfx' ? '#A32D2D' : '#1a1a1a';
+        t.appendChild(m);
+      });
+      overviewEl.appendChild(t);
+    });
+  }
+
+  // THUMB MODE
+  let tdrag = null;
+  function renderThumbMode(){
+    thumbGrid.innerHTML = '';
+    thumbGrid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${thumbSize}px, 1fr))`;
+    pages.forEach((p, idx)=>{
+      const wrap = document.createElement('div');
+      wrap.className = 'tmode-page-wrap';
+      const pageDiv = document.createElement('div');
+      pageDiv.className = 'tmode-page' + (selectedThumbPage === idx ? ' active' : '');
+      pageDiv.dataset.pageIdx = idx;
+      const num = document.createElement('div');
+      num.className = 'tmode-page-num';
+      num.textContent = String(idx + 1).padStart(2, '0');
+      pageDiv.appendChild(num);
+
+      p.elements.filter(e=>e.type==='panel').forEach(e=>{
+        const pn = document.createElement('div');
+        pn.className = 'tmode-panel';
+        const scripted = p.panelScripts[e.id] && p.panelScripts[e.id].trim();
+        if(scripted) pn.classList.add('scripted');
+        pn.dataset.elId = e.id;
+        pn.dataset.pageIdx = idx;
+        pn.style.left = (e.x/PAGE_W*100) + '%';
+        pn.style.top = (e.y/PAGE_H*100) + '%';
+        pn.style.width = (e.w/PAGE_W*100) + '%';
+        pn.style.height = (e.h/PAGE_H*100) + '%';
+        if(!scripted) pn.style.background = COLOR_SWATCHES[e.swatch||0].bg;
+        if(e.rotation) pn.style.transform = 'rotate('+e.rotation+'deg)';
+        pageDiv.appendChild(pn);
+      });
+
+      p.elements.filter(e=>['bubble','thought','caption','sfx'].includes(e.type)).forEach(e=>{
+        const m = document.createElement('div');
+        m.className = 'tmode-marker';
+        m.style.left = `calc(${e.x/PAGE_W*100}% - 2px)`;
+        m.style.top = `calc(${e.y/PAGE_H*100}% - 2px)`;
+        m.style.background = e.type==='caption' ? '#BA7517' : e.type==='sfx' ? '#A32D2D' : '#1a1a1a';
+        pageDiv.appendChild(m);
+      });
+
+      p.elements.filter(e=>e.type==='image').forEach(e=>{
+        const m = document.createElement('div');
+        m.style.position = 'absolute';
+        m.style.left = (e.x/PAGE_W*100) + '%';
+        m.style.top = (e.y/PAGE_H*100) + '%';
+        m.style.width = (e.w/PAGE_W*100) + '%';
+        m.style.height = (e.h/PAGE_H*100) + '%';
+        if(e.src){ m.style.backgroundImage = 'url(' + e.src + ')'; m.style.backgroundSize = 'cover'; m.style.backgroundPosition = 'center'; }
+        else { m.style.background = '#f1efe8'; }
+        m.style.border = '0.5px solid #aaa';
+        pageDiv.appendChild(m);
+      });
+
+      wrap.appendChild(pageDiv);
+      const title = document.createElement('input');
+      title.type = 'text'; title.className = 'tmode-title-input';
+      title.value = p.title; title.placeholder = 'scene note';
+      title.dataset.pageIdx = idx;
+      title.addEventListener('focus', ()=>{
+        if(title.dataset.historyStarted !== 'true'){
+          pushHistory();
+          title.dataset.historyStarted = 'true';
+        }
+      });
+      title.addEventListener('input', e=>{ pages[idx].title = e.target.value; markChanged(); });
+      title.addEventListener('blur', ()=>{ title.dataset.historyStarted = 'false'; });
+      wrap.appendChild(title);
+      thumbGrid.appendChild(wrap);
+    });
+  }
+
+  thumbGrid.addEventListener('mousedown', e=>{
+    if(e.target.tagName === 'INPUT') return;
+    const pn = e.target.closest('.tmode-panel');
+    const pg = e.target.closest('.tmode-page');
+    if(pn){
+      const id = pn.dataset.elId;
+      const idx = +pn.dataset.pageIdx;
+      const el = pages[idx].elements.find(x=>x.id===id);
+      if(!el) return;
+      const rect = pg.getBoundingClientRect();
+      pushHistory();
+      tdrag = {mode:'panel-move', el, pageIdx: idx, pageRect: rect, startX: e.clientX, startY: e.clientY, ox: el.x, oy: el.y, node: pn};
+      pn.classList.add('dragging');
+      e.preventDefault();
+    } else if(pg){
+      selectedThumbPage = +pg.dataset.pageIdx;
+      renderThumbMode();
+    }
+  });
+  document.addEventListener('mousemove', e=>{
+    if(!tdrag) return;
+    if(tdrag.mode === 'panel-move'){
+      const dx = e.clientX - tdrag.startX, dy = e.clientY - tdrag.startY;
+      const scale = tdrag.pageRect.width / PAGE_W;
+      tdrag.el.x = Math.max(0, Math.min(PAGE_W - tdrag.el.w, tdrag.ox + dx/scale));
+      tdrag.el.y = Math.max(0, Math.min(PAGE_H - tdrag.el.h, tdrag.oy + dy/scale));
+      tdrag.node.style.left = (tdrag.el.x/PAGE_W*100) + '%';
+      tdrag.node.style.top = (tdrag.el.y/PAGE_H*100) + '%';
+    }
+  });
+  document.addEventListener('mouseup', ()=>{
+    if(tdrag && tdrag.node){ tdrag.node.classList.remove('dragging'); }
+    if(tdrag){ markChanged(); renderOverview(); }
+    tdrag = null;
+  });
+  thumbGrid.addEventListener('dblclick', e=>{
+    const pn = e.target.closest('.tmode-panel');
+    const pg = e.target.closest('.tmode-page');
+    if(pn){
+      const id = pn.dataset.elId, idx = +pn.dataset.pageIdx;
+      pushHistory();
+      pages[idx].elements = pages[idx].elements.filter(x=>x.id !== id);
+      delete pages[idx].panelScripts[id];
+      markChanged();
+      renderThumbMode();
+      thumbStatus.textContent = 'Panel removed';
+      setTimeout(()=>{ thumbStatus.textContent = ''; }, 1500);
+    } else if(pg){
+      currentPage = +pg.dataset.pageIdx;
+      selectedId = null;
+      switchMode('page');
+    }
+  });
+  document.querySelectorAll('.quick-tpl').forEach(btn=>{
+    btn.onclick = ()=>{
+      if(selectedThumbPage === null){ thumbStatus.textContent = 'Click a page first'; setTimeout(()=>{ thumbStatus.textContent = ''; }, 2000); return; }
+      const tpl = btn.dataset.tpl;
+      pushHistory();
+      pages[selectedThumbPage].elements = pages[selectedThumbPage].elements.filter(x=>x.type !== 'panel');
+      pages[selectedThumbPage].panelScripts = {};
+      if(tpl !== 'clear' && TEMPLATES[tpl]){
+        TEMPLATES[tpl].forEach(([x,y,w,h])=>{ pages[selectedThumbPage].elements.push(makeElement('panel', {x,y,w,h})); });
+      }
+      markChanged();
+      renderThumbMode();
+    };
+  });
+  $('thumb-size').oninput = e=>{
+    thumbSize = +e.target.value;
+    thumbGrid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${thumbSize}px, 1fr))`;
+  };
+
+  function switchMode(newMode, skipRender){
+    mode = newMode;
+    $('mode-page').classList.toggle('active', mode==='page');
+    $('mode-thumb').classList.toggle('active', mode==='thumb');
+    $('page-mode-wrap').style.display = mode==='page' ? 'block' : 'none';
+    $('thumb-mode-wrap').style.display = mode==='thumb' ? 'block' : 'none';
+    $('page-toolbar').style.display = mode==='page' ? 'flex' : 'none';
+    $('thumb-toolbar').style.display = mode==='thumb' ? 'flex' : 'none';
+    $('mode-hint').textContent = mode==='page' ? 'Visual layout above, script below' : 'Block all pages at once';
+    if(!skipRender) render();
+  }
+  $('mode-page').onclick = ()=>switchMode('page');
+  $('mode-thumb').onclick = ()=>switchMode('thumb');
+
+  function openTextEditor(el){
+    textEditorElId = el.id;
+    textEditorInput.value = el.text || '';
+    textEditorModal.classList.add('open');
+    setTimeout(()=>{ textEditorInput.focus(); textEditorInput.select(); }, 0);
+  }
+
+  function closeTextEditor(){
+    textEditorModal.classList.remove('open');
+    textEditorElId = null;
+  }
+
+  function saveTextEditor(){
+    if(!textEditorElId) return closeTextEditor();
+    const el = pages[currentPage].elements.find(x=>x.id === textEditorElId);
+    if(el && el.text !== textEditorInput.value){
+      pushHistory();
+      el.text = textEditorInput.value;
+      markChanged();
+      render();
+    }
+    closeTextEditor();
+  }
+
+  $('text-editor-save').onclick = saveTextEditor;
+  $('text-editor-cancel').onclick = closeTextEditor;
+  $('text-editor-close').onclick = closeTextEditor;
+  textEditorModal.addEventListener('click', e=>{ if(e.target === textEditorModal) closeTextEditor(); });
+  textEditorInput.addEventListener('keydown', e=>{
+    if(e.key === 'Escape'){ closeTextEditor(); }
+    if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ saveTextEditor(); }
+  });
+
+  function showStartModal(){
+    startModal.classList.add('open');
+  }
+
+  function closeStartModal(){
+    startModal.classList.remove('open');
+    try { localStorage.setItem(START_SEEN_KEY, '1'); } catch(err){}
+  }
+
+  function confirmReplaceProject(){
+    const hasWork = pages.some(p=>
+      p.elements.length || (p.title && p.title.trim()) ||
+      (p.pageDirection && p.pageDirection.trim()) ||
+      Object.values(p.panelScripts || {}).some(s=>s && s.trim())
+    );
+    if(!hasWork || historyPast.length === 0) return true;
+    return confirm('This will replace the current project in the editor. Download a project file first if you want to keep it. Continue?');
+  }
+
+  $('new-project-btn').onclick = showStartModal;
+  $('start-close').onclick = closeStartModal;
+  startModal.addEventListener('click', e=>{ if(e.target === startModal) closeStartModal(); });
+  $('start-tutorial').onclick = ()=>{
+    if(!confirmReplaceProject()) return;
+    pushHistory();
+    createTutorialProject();
+    closeStartModal();
+    showToast('Tutorial loaded');
+  };
+  $('start-blank-24').onclick = ()=>{
+    if(!confirmReplaceProject()) return;
+    pushHistory();
+    createBlankProject(24);
+    closeStartModal();
+    showToast('Blank 24-page comic ready');
+  };
+  $('start-blank-8').onclick = ()=>{
+    if(!confirmReplaceProject()) return;
+    pushHistory();
+    createBlankProject(8);
+    closeStartModal();
+    showToast('Blank 8-page comic ready');
+  };
+  $('start-load').onclick = ()=>{
+    closeStartModal();
+    $('load-input').click();
+  };
+
+  projectTitleInput.onfocus = ()=>{
+    if(projectTitleInput.dataset.historyStarted !== 'true'){ pushHistory(); projectTitleInput.dataset.historyStarted = 'true'; }
+  };
+  projectTitleInput.oninput = ()=>{
+    projectMeta.title = projectTitleInput.value;
+    markChanged();
+  };
+  projectTitleInput.onblur = ()=>{ projectTitleInput.dataset.historyStarted = 'false'; };
+  projectAuthorInput.onfocus = ()=>{
+    if(projectAuthorInput.dataset.historyStarted !== 'true'){ pushHistory(); projectAuthorInput.dataset.historyStarted = 'true'; }
+  };
+  projectAuthorInput.oninput = ()=>{
+    projectMeta.author = projectAuthorInput.value;
+    markChanged();
+  };
+  projectAuthorInput.onblur = ()=>{ projectAuthorInput.dataset.historyStarted = 'false'; };
+
+  // PAGE MODE INTERACTION
+  let drag = null;
+  function getBoardForEvent(target){ return target.closest('.page-board'); }
+
+  document.addEventListener('mousedown', e=>{
+    if(mode !== 'page') return;
+    const board = getBoardForEvent(e.target);
+    if(!board) return;
+    const isRight = board === pageRight;
+    const tailHandle = e.target.closest('.cmc-tail-handle');
+    if(tailHandle){
+      const id = tailHandle.dataset.tailFor;
+      const el = pages[currentPage].elements.find(x=>x.id===id);
+      if(el && el.tail){
+        drag = {mode:'tail', el, board, startX: e.clientX, startY: e.clientY, ox: el.tail.x, oy: el.tail.y};
+        e.preventDefault(); return;
+      }
+    }
+    const handle = e.target.closest('.cmc-handle');
+    const elNode = e.target.closest('.cmc-el');
+    if(!elNode){
+      if(board === pageLeft || board === pageRight){ selectedId = null; render(); }
+      return;
+    }
+    const id = elNode.dataset.id;
+    if(isRight) return;
+    const el = pages[currentPage].elements.find(x=>x.id===id);
+    if(!el) return;
+    if(selectedId !== id){ selectedId = id; el.z = Date.now(); render(); }
+    const rect = board.getBoundingClientRect();
+    pushHistory();
+    if(handle){
+      const corner = handle.dataset.corner;
+      if(corner === 'rot'){
+        const cx = el.x + el.w/2 + rect.left, cy = el.y + el.h/2 + rect.top;
+        drag = {mode:'rotate', el, board, cx, cy, startAngle: Math.atan2(e.clientY-cy, e.clientX-cx), startRot: el.rotation || 0};
+      } else {
+        drag = {mode:'resize', el, board, corner, startX: e.clientX, startY: e.clientY, ox: el.x, oy: el.y, ow: el.w, oh: el.h};
+      }
+    } else {
+      drag = {mode:'move', el, board, startX: e.clientX, startY: e.clientY, ox: el.x, oy: el.y, otx: el.tail?el.tail.x:0, oty: el.tail?el.tail.y:0};
+    }
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e=>{
+    if(!drag) return;
+    const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+    if(drag.mode === 'move'){
+      const newX = Math.max(0, Math.min(PAGE_W - drag.el.w, drag.ox + dx));
+      const newY = Math.max(0, Math.min(PAGE_H - drag.el.h, drag.oy + dy));
+      drag.el.x = newX; drag.el.y = newY;
+      if(drag.el.tail){
+        drag.el.tail.x = drag.otx + (newX - drag.ox);
+        drag.el.tail.y = drag.oty + (newY - drag.oy);
+      }
+    } else if(drag.mode === 'resize'){
+      let nx = drag.ox, ny = drag.oy, nw = drag.ow, nh = drag.oh;
+      if(drag.corner.includes('e')) nw = Math.max(30, drag.ow + dx);
+      if(drag.corner.includes('s')) nh = Math.max(30, drag.oh + dy);
+      if(drag.corner.includes('w')){ nw = Math.max(30, drag.ow - dx); nx = drag.ox + (drag.ow - nw); }
+      if(drag.corner.includes('n')){ nh = Math.max(30, drag.oh - dy); ny = drag.oy + (drag.oh - nh); }
+      drag.el.x = nx; drag.el.y = ny; drag.el.w = nw; drag.el.h = nh;
+    } else if(drag.mode === 'rotate'){
+      const ang = Math.atan2(e.clientY-drag.cy, e.clientX-drag.cx);
+      drag.el.rotation = Math.round(Math.max(-180, Math.min(180, ((ang - drag.startAngle)*180/Math.PI) + drag.startRot)));
+    } else if(drag.mode === 'tail'){
+      drag.el.tail.x = Math.max(0, Math.min(PAGE_W, drag.ox + dx));
+      drag.el.tail.y = Math.max(0, Math.min(PAGE_H, drag.oy + dy));
+    }
+    if(drag.mode === 'move' && drag.el.type === 'panel'){ render(); }
+    else { renderPage(pageLeft, currentPage); }
+  });
+  document.addEventListener('mouseup', ()=>{
+    if(drag && drag.el && drag.el.type === 'panel'){ render(); }
+    if(drag){ markChanged(); }
+    drag = null;
+  });
+
+  document.addEventListener('dblclick', e=>{
+    if(mode !== 'page') return;
+    const elNode = e.target.closest('.cmc-el');
+    if(!elNode) return;
+    const board = getBoardForEvent(e.target);
+    if(board === pageRight) return;
+    const id = elNode.dataset.id;
+    const el = pages[currentPage].elements.find(x=>x.id===id);
+    if(!el) return;
+    if(el.type === 'image'){
+      pendingImageElId = el.id;
+      $('image-input').click();
+      return;
+    }
+    if(el.type === 'panel'){
+      const entry = panelScriptsEl.querySelector(`[data-panel-id="${el.id}"] textarea`);
+      if(entry){ entry.focus(); entry.scrollIntoView({behavior:'smooth', block:'center'}); }
+      return;
+    }
+    if(['bubble','thought','caption','sfx'].includes(el.type)){
+      openTextEditor(el);
+    }
+  });
+
+  document.addEventListener('keydown', e=>{
+    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){
+      if(e.shiftKey) redo();
+      else undo();
+      e.preventDefault();
+      return;
+    }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y'){
+      redo();
+      e.preventDefault();
+      return;
+    }
+    if((e.key === 'Delete' || e.key === 'Backspace') && selectedId && mode === 'page'){
+      const el = pages[currentPage].elements.find(x=>x.id===selectedId);
+      pushHistory();
+      pages[currentPage].elements = pages[currentPage].elements.filter(x=>x.id!==selectedId);
+      if(el && el.type === 'panel'){ delete pages[currentPage].panelScripts[selectedId]; }
+      selectedId = null; markChanged(); render();
+      e.preventDefault();
+    }
+  });
+
+  document.querySelectorAll('[data-add]').forEach(b=>{
+    b.onclick = ()=>{
+      const type = b.dataset.add;
+      if(type === 'image'){ pendingImageElId = null; $('image-input').click(); return; }
+      pushHistory();
+      const el = makeElement(type);
+      pages[currentPage].elements.push(el);
+      selectedId = el.id;
+      markChanged();
+      render();
+    };
+  });
+
+  $('template-select').onchange = e=>{
+    const tpl = TEMPLATES[e.target.value];
+    if(!tpl) return;
+    const page = pages[currentPage];
+    const hasScripts = Object.values(page.panelScripts).some(s=>s && s.trim());
+    if(hasScripts){
+      if(!confirm('Applying a new template replaces existing panels and clears their scripts. Continue?')){ e.target.value = ''; return; }
+    }
+    pushHistory();
+    page.elements = page.elements.filter(x=>x.type !== 'panel');
+    page.panelScripts = {};
+    tpl.forEach(([x,y,w,h])=>{ page.elements.push(makeElement('panel', {x,y,w,h})); });
+    e.target.value = '';
+    selectedId = null;
+    markChanged();
+    render();
+  };
+
+  function fileToDataUrl(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ev=>resolve(ev.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function resizeImageFile(file, maxEdge=1200){
+    return new Promise((resolve)=>{
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = ()=>{
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
+        if(scale === 1 && file.size < 650000){
+          fileToDataUrl(file).then(resolve);
+          return;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        resolve(canvas.toDataURL(type, type === 'image/jpeg' ? 0.86 : undefined));
+      };
+      img.onerror = ()=>{
+        URL.revokeObjectURL(url);
+        fileToDataUrl(file).then(resolve);
+      };
+      img.src = url;
+    });
+  }
+
+  let pendingImageElId = null;
+  $('image-input').addEventListener('change', async e=>{
+    const file = e.target.files[0]; if(!file) return;
+    try {
+      const src = await resizeImageFile(file);
+      pushHistory();
+      if(pendingImageElId){
+        const el = pages[currentPage].elements.find(x=>x.id===pendingImageElId);
+        if(el){ el.src = src; }
+      } else {
+        const el = makeElement('image', {src});
+        pages[currentPage].elements.push(el);
+        selectedId = el.id;
+      }
+      pendingImageElId = null;
+      markChanged();
+      render();
+      showToast('Image added');
+    } catch(err){
+      showToast('Image import failed');
+    }
+    e.target.value = '';
+  });
+
+  $('delete-selected').onclick = ()=>{
+    if(!selectedId) return;
+    const el = pages[currentPage].elements.find(x=>x.id===selectedId);
+    pushHistory();
+    pages[currentPage].elements = pages[currentPage].elements.filter(x=>x.id!==selectedId);
+    if(el && el.type === 'panel'){ delete pages[currentPage].panelScripts[selectedId]; }
+    selectedId = null; markChanged(); render();
+  };
+
+  $('duplicate-page').onclick = ()=>{
+    if(pages.length >= MAX_PAGES){ showToast('Max ' + MAX_PAGES + ' pages'); return; }
+    pushHistory();
+    const src = pages[currentPage];
+    const cloned = JSON.parse(JSON.stringify(src.elements));
+    const idMap = {};
+    cloned.forEach(c=>{ const old = c.id; c.id = uid(); idMap[old] = c.id; });
+    const newScripts = {};
+    Object.keys(src.panelScripts).forEach(oldId=>{ if(idMap[oldId]) newScripts[idMap[oldId]] = src.panelScripts[oldId]; });
+    const newPage = {
+      title: src.title + ' (copy)',
+      pageDirection: src.pageDirection || '',
+      panelScripts: newScripts,
+      elements: cloned
+    };
+    pages.splice(currentPage + 1, 0, newPage);
+    currentPage = currentPage + 1;
+    selectedId = null;
+    refreshPageSelect();
+    markChanged();
+    render();
+  };
+
+  $('add-page').onclick = ()=>{
+    if(pages.length >= MAX_PAGES){ showToast('Max ' + MAX_PAGES + ' pages'); return; }
+    pushHistory();
+    pages.splice(currentPage + 1, 0, {title:'', pageDirection:'', panelScripts:{}, elements:[]});
+    currentPage = currentPage + 1;
+    selectedId = null;
+    refreshPageSelect();
+    markChanged();
+    render();
+    showToast('Added page ' + (currentPage + 1));
+  };
+
+  $('remove-page').onclick = ()=>{
+    if(pages.length <= MIN_PAGES){ showToast('At least 1 page required'); return; }
+    const p = pages[currentPage];
+    const hasContent = p.elements.length > 0 || (p.title && p.title.trim()) ||
+      (p.pageDirection && p.pageDirection.trim()) ||
+      Object.values(p.panelScripts).some(s => s && s.trim());
+    const msg = hasContent
+      ? 'Page ' + (currentPage + 1) + ' has content that will be permanently deleted. Remove it?'
+      : 'Remove page ' + (currentPage + 1) + '?';
+    if(!confirm(msg)) return;
+    pushHistory();
+    pages.splice(currentPage, 1);
+    if(currentPage >= pages.length){ currentPage = pages.length - 1; }
+    selectedId = null;
+    refreshPageSelect();
+    markChanged();
+    render();
+  };
+
+  pageSelect.onchange = e=>{ currentPage = +e.target.value; selectedId = null; render(); };
+  $('prev-page').onclick = ()=>{ if(currentPage>0){currentPage--; selectedId=null; render();} };
+  $('next-page').onclick = ()=>{ if(currentPage<pages.length-1){currentPage++; selectedId=null; render();} };
+  pageTitle.onfocus = ()=>{
+    if(pageTitle.dataset.historyStarted !== 'true'){ pushHistory(); pageTitle.dataset.historyStarted = 'true'; }
+  };
+  pageTitle.oninput = e=>{ pages[currentPage].title = e.target.value; markChanged(); renderOverview(); };
+  pageTitle.onblur = ()=>{ pageTitle.dataset.historyStarted = 'false'; };
+  pageDirectionEl.onfocus = ()=>{
+    if(pageDirectionEl.dataset.historyStarted !== 'true'){ pushHistory(); pageDirectionEl.dataset.historyStarted = 'true'; }
+  };
+  pageDirectionEl.oninput = e=>{ pages[currentPage].pageDirection = e.target.value; markChanged(); };
+  pageDirectionEl.onblur = ()=>{ pageDirectionEl.dataset.historyStarted = 'false'; };
+  $('toggle-spread').onclick = ()=>{ spreadView = !spreadView; render(); };
+
+  // Help modal
+  $('help-btn').onclick = ()=>{ $('help-modal').classList.add('open'); };
+  $('help-modal').addEventListener('click', e=>{ if(e.target === $('help-modal')) $('help-modal').classList.remove('open'); });
+  $('undo-btn').onclick = undo;
+  $('redo-btn').onclick = redo;
+  $('restore-autosave').onclick = ()=>{
+    try {
+      const data = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || '{}');
+      if(data.pages && Array.isArray(data.pages)){
+        pushHistory();
+        pages = data.pages.map(p=>({
+          title: p.title || '',
+          pageDirection: p.pageDirection || '',
+          panelScripts: p.panelScripts || {},
+          elements: p.elements || []
+        }));
+        projectMeta = Object.assign({title:'', author:''}, data.projectMeta || {});
+        syncMetaInputs();
+        currentPage = 0;
+        selectedId = null;
+        let maxId = 0;
+        pages.forEach(p=>p.elements.forEach(el=>{
+          const m = (el.id||'').match(/el-(\d+)/);
+          if(m) maxId = Math.max(maxId, +m[1]);
+        }));
+        elIdCounter = maxId + 1;
+        recoveryBanner.classList.remove('show');
+        refreshPageSelect();
+        render();
+        updateUndoRedoButtons();
+        showToast('Recovery restored');
+      }
+    } catch(err){ showToast('Recovery restore failed'); }
+  };
+  $('discard-autosave').onclick = ()=>{
+    localStorage.removeItem(AUTOSAVE_KEY);
+    recoveryBanner.classList.remove('show');
+    showToast('Recovery discarded');
+  };
+
+  window.addEventListener('beforeunload', e=>{
+    if(historyPast.length === 0) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+
+  // Compile script
+  $('compile-script').onclick = ()=>{
+    let out = '';
+    if((projectMeta.title && projectMeta.title.trim()) || (projectMeta.author && projectMeta.author.trim())){
+      out += `${projectMeta.title && projectMeta.title.trim() ? projectMeta.title.trim() : 'Untitled Comic'}\n`;
+      if(projectMeta.author && projectMeta.author.trim()) out += `by ${projectMeta.author.trim()}\n`;
+      out += `Draft exported ${new Date().toLocaleString()}\n`;
+    }
+    pages.forEach((p, idx)=>{
+      const panels = getOrderedPanels(idx);
+      const hasContent = p.title || p.pageDirection || panels.some(pn=>p.panelScripts[pn.id] && p.panelScripts[pn.id].trim());
+      if(!hasContent && panels.length === 0) return;
+      out += `\n${'='.repeat(50)}\nPAGE ${idx + 1}${p.title ? ' — ' + p.title : ''}\n${'='.repeat(50)}\n`;
+      if(p.pageDirection && p.pageDirection.trim()){ out += `\n[PAGE DIRECTION]\n${p.pageDirection.trim()}\n`; }
+      panels.forEach((panel, pIdx)=>{
+        out += `\nPANEL ${pIdx + 1}\n`;
+        const script = p.panelScripts[panel.id];
+        if(script && script.trim()){ out += script.trim() + '\n'; }
+        else { out += '[no description]\n'; }
+        const lettering = p.elements.filter(e=>{
+          if(!['bubble','thought','caption','sfx'].includes(e.type)) return false;
+          const cx = e.x + e.w/2, cy = e.y + e.h/2;
+          return cx >= panel.x && cx <= panel.x + panel.w && cy >= panel.y && cy <= panel.y + panel.h;
+        });
+        lettering.forEach(l=>{
+          const tag = l.type === 'bubble' ? 'DIALOGUE' : l.type === 'thought' ? 'THOUGHT' : l.type === 'caption' ? 'CAPTION' : 'SFX';
+          out += `  ${tag}: ${l.text || ''}\n`;
+        });
+      });
+    });
+    if(!out.trim()){ showToast('No script content yet'); return; }
+    const ts = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+    downloadFile(out, `comic-blocker-script-${ts}.txt`, 'text/plain');
+    showToast('Script downloaded');
+  };
+
+  function downloadFile(content, filename, type){
+    const blob = new Blob([content], {type});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  // Save / Load — file based, works offline
+  $('save-project').onclick = ()=>{
+    const data = JSON.stringify({pages, projectMeta, version: 8, savedAt: Date.now()}, null, 2);
+    const ts = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+    downloadFile(data, `comic-blocker-${ts}.json`, 'application/json');
+    lastSavedAt = Date.now();
+    localStorage.removeItem(AUTOSAVE_KEY);
+    recoveryBanner.classList.remove('show');
+    historyPast = [];
+    historyFuture = [];
+    updateUndoRedoButtons();
+    showToast('Project saved');
+  };
+  $('load-project').onclick = ()=>$('load-input').click();
+  $('load-input').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      try {
+        const data = JSON.parse(ev.target.result);
+        if(data.pages && Array.isArray(data.pages)){
+          pages = data.pages.map(p=>({
+            title: p.title || '',
+            pageDirection: p.pageDirection || '',
+            panelScripts: p.panelScripts || {},
+            elements: p.elements || []
+          }));
+          projectMeta = Object.assign({title:'', author:''}, data.projectMeta || {});
+          syncMetaInputs();
+          if(pages.length === 0){ pages = [{title:'',pageDirection:'',panelScripts:{},elements:[]}]; }
+          // re-seed elIdCounter to avoid collisions
+          let maxId = 0;
+          pages.forEach(p=>p.elements.forEach(el=>{
+            const m = (el.id||'').match(/el-(\d+)/);
+            if(m) maxId = Math.max(maxId, +m[1]);
+          }));
+          elIdCounter = maxId + 1;
+          currentPage = 0; selectedId = null;
+          historyPast = [];
+          historyFuture = [];
+          markChanged();
+          refreshPageSelect();
+          render();
+          updateUndoRedoButtons();
+          showToast('Project loaded');
+        } else { showToast('Not a valid project file'); }
+      } catch(err){ showToast('Load failed: ' + err.message, 3500); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  function renderProps(){
+    if(!selectedId){ propsEl.style.display = 'none'; return; }
+    const el = pages[currentPage].elements.find(x=>x.id===selectedId);
+    if(!el){ propsEl.style.display = 'none'; return; }
+    propsEl.style.display = 'flex';
+    propsEl.innerHTML = '';
+
+    const lbl = document.createElement('span');
+    lbl.style.cssText = 'font-weight:600; text-transform:capitalize; min-width:60px;';
+    if(el.type === 'panel'){
+      const ordered = getOrderedPanels(currentPage);
+      const idx = ordered.findIndex(p=>p.id===el.id);
+      lbl.textContent = idx >= 0 ? ('Panel ' + (idx+1)) : 'Panel';
+    } else { lbl.textContent = el.type; }
+    propsEl.appendChild(lbl);
+
+    if(el.type !== 'sfx'){
+      const swrap = document.createElement('span');
+      swrap.style.cssText = 'display:flex; gap:4px; align-items:center;';
+      const swlbl = document.createElement('span'); swlbl.className = 'label'; swlbl.textContent = 'Color';
+      swrap.appendChild(swlbl);
+      COLOR_SWATCHES.forEach((sw,i)=>{
+        const s = document.createElement('span');
+        s.className = 'swatch' + (i === (el.swatch||0) ? ' active' : '');
+        s.style.background = sw.bg; s.title = sw.name;
+        s.onclick = ()=>{ pushHistory(); el.swatch = i; markChanged(); render(); };
+        swrap.appendChild(s);
+      });
+      propsEl.appendChild(swrap);
+    } else {
+      const swrap = document.createElement('span');
+      swrap.style.cssText = 'display:flex; gap:4px; align-items:center;';
+      const swlbl = document.createElement('span'); swlbl.className = 'label'; swlbl.textContent = 'Color';
+      swrap.appendChild(swlbl);
+      ['#A32D2D','#185FA5','#0F6E56','#BA7517','#1a1a1a','#993556'].forEach(c=>{
+        const s = document.createElement('span');
+        s.className = 'swatch' + (c === el.sfxColor ? ' active' : '');
+        s.style.background = c;
+        s.onclick = ()=>{ pushHistory(); el.sfxColor = c; markChanged(); render(); };
+        swrap.appendChild(s);
+      });
+      propsEl.appendChild(swrap);
+    }
+
+    if(['bubble','thought','caption','sfx'].includes(el.type)){
+      const fwrap = document.createElement('span');
+      fwrap.style.cssText = 'display:flex; gap:4px; align-items:center;';
+      const flbl = document.createElement('span'); flbl.className = 'label'; flbl.textContent = 'Font';
+      fwrap.appendChild(flbl);
+      const sel = document.createElement('select'); sel.style.fontSize = '12px';
+      Object.keys(FONT_PRESETS).forEach(k=>{
+        const o = document.createElement('option');
+        o.value = k; o.textContent = k;
+        if(k === el.font) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.onfocus = ()=>{ if(sel.dataset.historyStarted !== 'true'){ pushHistory(); sel.dataset.historyStarted = 'true'; } };
+      sel.onchange = ()=>{ el.font = sel.value; markChanged(); render(); };
+      fwrap.appendChild(sel);
+      propsEl.appendChild(fwrap);
+
+      const sizeWrap = document.createElement('span');
+      sizeWrap.style.cssText = 'display:flex; gap:4px; align-items:center;';
+      const sizeLbl = document.createElement('span'); sizeLbl.className = 'label'; sizeLbl.textContent = 'Size';
+      const sizeVal = document.createElement('span');
+      sizeVal.style.cssText = 'min-width:30px; font-size:11px; color:var(--text-dim);';
+      const sizeIpt = document.createElement('input');
+      const presetSize = FONT_PRESETS[el.font || 'Dialogue']?.size || 14;
+      sizeIpt.type = 'range'; sizeIpt.min = '8'; sizeIpt.max = el.type === 'sfx' ? '56' : '28'; sizeIpt.step = '1';
+      sizeIpt.value = el.fontSize || presetSize; sizeIpt.style.width = '80px';
+      sizeVal.textContent = sizeIpt.value + 'px';
+      sizeIpt.onpointerdown = ()=>{ if(sizeIpt.dataset.historyStarted !== 'true'){ pushHistory(); sizeIpt.dataset.historyStarted = 'true'; } };
+      sizeIpt.oninput = ()=>{ el.fontSize = +sizeIpt.value; sizeVal.textContent = el.fontSize + 'px'; markChanged(); renderPage(pageLeft, currentPage); renderOverview(); };
+      sizeIpt.onchange = ()=>{ sizeIpt.dataset.historyStarted = 'false'; };
+      sizeWrap.appendChild(sizeLbl); sizeWrap.appendChild(sizeIpt); sizeWrap.appendChild(sizeVal);
+      propsEl.appendChild(sizeWrap);
+    }
+
+    if(['panel','image','bubble','thought','caption'].includes(el.type)){
+      const bwrap = document.createElement('span');
+      bwrap.style.cssText = 'display:flex; gap:4px; align-items:center;';
+      const blbl = document.createElement('span'); blbl.className = 'label'; blbl.textContent = 'Border';
+      bwrap.appendChild(blbl);
+      const ipt = document.createElement('input');
+      ipt.type = 'range'; ipt.min = '0'; ipt.max = '6'; ipt.step = '0.5';
+      ipt.value = el.borderWidth || 1; ipt.style.width = '70px';
+      ipt.onpointerdown = ()=>{ if(ipt.dataset.historyStarted !== 'true'){ pushHistory(); ipt.dataset.historyStarted = 'true'; } };
+      ipt.oninput = ()=>{ el.borderWidth = +ipt.value; markChanged(); renderPage(pageLeft, currentPage); renderOverview(); };
+      ipt.onchange = ()=>{ ipt.dataset.historyStarted = 'false'; };
+      bwrap.appendChild(ipt);
+      propsEl.appendChild(bwrap);
+    }
+
+    const rwrap = document.createElement('span');
+    rwrap.style.cssText = 'display:flex; gap:4px; align-items:center;';
+    const rlbl = document.createElement('span'); rlbl.className = 'label'; rlbl.textContent = 'Rot';
+    rwrap.appendChild(rlbl);
+    const rval = document.createElement('span');
+    rval.style.cssText = 'min-width: 30px; font-size: 11px; color: var(--text-dim);';
+    rval.textContent = (el.rotation||0) + '°';
+    const ript = document.createElement('input');
+    ript.type = 'range'; ript.min = '-45'; ript.max = '45'; ript.step = '1';
+    ript.value = el.rotation || 0; ript.style.width = '80px';
+    ript.onpointerdown = ()=>{ if(ript.dataset.historyStarted !== 'true'){ pushHistory(); ript.dataset.historyStarted = 'true'; } };
+    ript.oninput = ()=>{ el.rotation = +ript.value; rval.textContent = el.rotation + '°'; markChanged(); renderPage(pageLeft, currentPage); renderOverview(); };
+    ript.onchange = ()=>{ ript.dataset.historyStarted = 'false'; };
+    rwrap.appendChild(ript); rwrap.appendChild(rval);
+    propsEl.appendChild(rwrap);
+
+    if(el.type === 'bubble' || el.type === 'thought'){
+      const btn = document.createElement('button');
+      btn.textContent = el.tail ? 'Remove tail' : 'Add tail';
+      btn.onclick = ()=>{
+        pushHistory();
+        if(el.tail){ el.tail = null; }
+        else { el.tail = {x: el.x + el.w/2, y: el.y + el.h + 30}; }
+        markChanged();
+        render();
+      };
+      propsEl.appendChild(btn);
+    }
+
+    const layWrap = document.createElement('span');
+    layWrap.style.cssText = 'display:flex; gap:4px;';
+    const upBtn = document.createElement('button'); upBtn.textContent = '▲'; upBtn.title = 'Bring forward';
+    upBtn.onclick = ()=>{ pushHistory(); el.z = Date.now(); markChanged(); render(); };
+    const dnBtn = document.createElement('button'); dnBtn.textContent = '▼'; dnBtn.title = 'Send back';
+    dnBtn.onclick = ()=>{ pushHistory(); el.z = -Date.now(); markChanged(); render(); };
+    layWrap.appendChild(upBtn); layWrap.appendChild(dnBtn);
+    propsEl.appendChild(layWrap);
+  }
+
+  // PDF export
+  $('export-pdf').onclick = ()=>{
+    showToast('Building PDF…', 1500);
+    setTimeout(()=>{
+      try {
+        const { jsPDF } = window.jspdf;
+        const PDF_PAGE_H = PAGE_H + 380;
+        const pdf = new jsPDF({unit:'pt', format:[PAGE_W, PDF_PAGE_H]});
+        pdf.setProperties({
+          title: projectMeta.title || 'Comic Blocker Project',
+          author: projectMeta.author || 'Comic Blocker'
+        });
+        for(let p=0; p<pages.length; p++){
+          const page = pages[p];
+          if(p > 0) pdf.addPage([PAGE_W, PDF_PAGE_H]);
+          const sorted = page.elements.slice().sort((a,b)=>a.z-b.z);
+          const orderedPanels = getOrderedPanels(p);
+          const numMap = {};
+          orderedPanels.forEach((pn, i)=>{ numMap[pn.id] = i+1; });
+
+          sorted.forEach(el=>{
+            if(el.tail && (el.type==='bubble' || el.type==='thought')){
+              const sw = COLOR_SWATCHES[el.swatch||0];
+              const cx = el.x + el.w/2, cy = el.y + el.h/2;
+              const tx = el.tail.x, ty = el.tail.y;
+              if(el.type === 'bubble'){
+                const ang = Math.atan2(ty-cy, tx-cx);
+                const ax = cx + Math.cos(ang+0.35)*(el.w/2-4);
+                const ay = cy + Math.sin(ang+0.35)*(el.h/2-4);
+                const bx = cx + Math.cos(ang-0.35)*(el.w/2-4);
+                const by = cy + Math.sin(ang-0.35)*(el.h/2-4);
+                pdf.setFillColor(sw.bg); pdf.setDrawColor(sw.border);
+                pdf.setLineWidth(el.borderWidth||1.5);
+                pdf.lines([[tx-ax, ty-ay],[bx-tx, by-ty],[ax-bx, ay-by]], ax, ay, [1,1], 'FD', true);
+              } else {
+                const ang = Math.atan2(ty-cy, tx-cx);
+                const ex = cx + Math.cos(ang)*(el.w/2);
+                const ey = cy + Math.sin(ang)*(el.h/2);
+                const dist = Math.hypot(tx-ex, ty-ey);
+                const dots = Math.max(2, Math.min(5, Math.round(dist/18)));
+                pdf.setFillColor(sw.bg); pdf.setDrawColor(sw.border);
+                pdf.setLineWidth(el.borderWidth||1.5);
+                for(let i=1; i<=dots; i++){
+                  const t = i/(dots+1);
+                  const px = ex + (tx-ex)*t, py = ey + (ty-ey)*t;
+                  const r = 3 + i*1.2;
+                  pdf.circle(px, py, r, 'FD');
+                }
+              }
+            }
+          });
+          sorted.forEach(el=>{
+            const sw = COLOR_SWATCHES[el.swatch||0];
+            if(el.type === 'panel'){
+              pdf.setFillColor(sw.bg); pdf.setDrawColor(sw.border);
+              pdf.setLineWidth(el.borderWidth||2);
+              pdf.rect(el.x, el.y, el.w, el.h, 'FD');
+              pdf.setTextColor('#BA7517');
+              pdf.setFont('courier', 'bold');
+              pdf.setFontSize(9);
+              pdf.text(String(numMap[el.id] || '?'), el.x + 6, el.y + 12);
+            } else if(el.type === 'image' && el.src){
+              try { pdf.addImage(el.src, 'AUTO', el.x, el.y, el.w, el.h); } catch(err){}
+            } else if(el.type === 'image'){
+              pdf.setFillColor('#f1efe8'); pdf.rect(el.x, el.y, el.w, el.h, 'F');
+            } else if(el.type === 'bubble'){
+              pdf.setFillColor(sw.bg); pdf.setDrawColor(sw.border);
+              pdf.setLineWidth(el.borderWidth||1.5);
+              pdf.ellipse(el.x+el.w/2, el.y+el.h/2, el.w/2, el.h/2, 'FD');
+              drawText(pdf, el);
+            } else if(el.type === 'thought'){
+              pdf.setFillColor(sw.bg); pdf.setDrawColor(sw.border);
+              pdf.setLineWidth(el.borderWidth||1.5);
+              pdf.setLineDashPattern([4,3], 0);
+              pdf.ellipse(el.x+el.w/2, el.y+el.h/2, el.w/2, el.h/2, 'FD');
+              pdf.setLineDashPattern([], 0);
+              drawText(pdf, el);
+            } else if(el.type === 'caption'){
+              pdf.setFillColor(sw.bg); pdf.setDrawColor(sw.border);
+              pdf.setLineWidth(el.borderWidth||1);
+              pdf.rect(el.x, el.y, el.w, el.h, 'FD');
+              drawText(pdf, el);
+            } else if(el.type === 'sfx'){
+              pdf.setTextColor(el.sfxColor || '#A32D2D');
+              pdf.setFont('helvetica', 'bolditalic');
+              pdf.setFontSize(el.fontSize || 28);
+              const tx = el.x + el.w/2, ty = el.y + el.h/2 + 8;
+              if(el.rotation){ pdf.text(el.text || '', tx, ty, {align:'center', angle: -el.rotation}); }
+              else { pdf.text(el.text || '', tx, ty, {align:'center'}); }
+            }
+          });
+          pdf.setFontSize(9); pdf.setTextColor('#bbb');
+          pdf.text(String(p+1), 10, PAGE_H - 8);
+          if(page.title){
+            pdf.setFontSize(9); pdf.setTextColor('#999');
+            pdf.text(page.title, PAGE_W/2, PAGE_H - 8, {align:'center'});
+          }
+          if(p === 0 && ((projectMeta.title && projectMeta.title.trim()) || (projectMeta.author && projectMeta.author.trim()))){
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(9);
+            pdf.setTextColor('#555');
+            pdf.text(projectMeta.title || 'Untitled Comic', 20, 14);
+            if(projectMeta.author && projectMeta.author.trim()){
+              pdf.setFont('helvetica', 'normal');
+              pdf.text('by ' + projectMeta.author.trim(), PAGE_W - 20, 14, {align:'right'});
+            }
+          }
+          let sy = PAGE_H + 24;
+          pdf.setDrawColor('#BA7517');
+          pdf.setLineWidth(0.5);
+          pdf.setLineDashPattern([2,2], 0);
+          pdf.line(20, sy - 8, PAGE_W - 20, sy - 8);
+          pdf.setLineDashPattern([], 0);
+          pdf.setFont('courier', 'bold');
+          pdf.setFontSize(10);
+          pdf.setTextColor('#BA7517');
+          pdf.text('SCRIPT — PAGE ' + (p+1), 20, sy);
+          sy += 14;
+          if(page.pageDirection && page.pageDirection.trim()){
+            pdf.setFont('courier', 'normal');
+            pdf.setFontSize(8); pdf.setTextColor('#854F0B');
+            pdf.text('PAGE DIRECTION:', 20, sy); sy += 10;
+            pdf.setTextColor('#2C2C2A');
+            const dlines = pdf.splitTextToSize(page.pageDirection, PAGE_W - 40);
+            dlines.forEach(line=>{ if(sy <= PDF_PAGE_H - 14){ pdf.text(line, 20, sy); sy += 10; } });
+            sy += 6;
+          }
+          orderedPanels.forEach((panel, pIdx)=>{
+            if(sy > PDF_PAGE_H - 24) return;
+            pdf.setFillColor('#BA7517');
+            pdf.rect(20, sy - 9, 56, 12, 'F');
+            pdf.setTextColor('#FFFFFF');
+            pdf.setFont('courier', 'bold');
+            pdf.setFontSize(8);
+            pdf.text('PANEL ' + (pIdx+1), 23, sy);
+            sy += 10;
+            pdf.setTextColor('#2C2C2A');
+            pdf.setFont('courier', 'normal');
+            pdf.setFontSize(9);
+            const script = page.panelScripts[panel.id] || '[no description]';
+            const lines = pdf.splitTextToSize(script, PAGE_W - 40);
+            lines.forEach(line=>{ if(sy <= PDF_PAGE_H - 14){ pdf.text(line, 24, sy); sy += 11; } });
+            sy += 6;
+          });
+        }
+        const ts = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+        pdf.save(`comic-blocker-${ts}.pdf`);
+        showToast('PDF ready');
+      } catch(err){ console.error(err); showToast('PDF failed: ' + err.message, 3500); }
+    }, 50);
+  };
+
+  function drawText(pdf, el){
+    if(!el.text) return;
+    const sw = COLOR_SWATCHES[el.swatch||0];
+    pdf.setTextColor(sw.fg);
+    let font = 'helvetica', style = 'normal', size = el.fontSize || 12;
+    if(el.font === 'Caption'){ font = 'times'; style = 'italic'; size = el.fontSize || 11; }
+    else if(el.font === 'SFX'){ font = 'helvetica'; style = 'bolditalic'; size = el.fontSize || 22; }
+    else if(el.font === 'Note'){ font = 'courier'; style = 'normal'; size = el.fontSize || 10; }
+    pdf.setFont(font, style); pdf.setFontSize(size);
+    const lines = pdf.splitTextToSize(el.text, el.w - 16);
+    const lh = size * 1.2;
+    const totalH = lines.length * lh;
+    let y = el.y + el.h/2 - totalH/2 + size;
+    lines.forEach(line=>{ pdf.text(line, el.x + el.w/2, y, {align:'center'}); y += lh; });
+  }
+
+  // Seed page 1 with the 6-panel template for returning users who skip the start screen.
+  TEMPLATES['6std'].forEach(([x,y,w,h])=>{
+    pages[0].elements.push(makeElement('panel', {x,y,w,h}));
+  });
+  syncMetaInputs();
+  refreshPageSelect();
+  updateUndoRedoButtons();
+  render();
+  checkAutosave();
+  try {
+    if(localStorage.getItem(START_SEEN_KEY) !== '1'){
+      showStartModal();
+    }
+  } catch(err){
+    showStartModal();
+  }
+})();
+</script>
+</body>
+</html>
