@@ -31,3 +31,15 @@ Open `index.html` in a browser, or deploy the folder to any static host. The app
 ## Privacy
 
 Comic Blocker does not upload projects anywhere. Save files, autosave recovery, and imported images stay in the user's browser/computer unless the user chooses to share an exported file.
+
+## Optional Product Analytics
+
+Comic Blocker can send privacy-safe product events to PostHog. It is off by default.
+
+To enable it, create a free PostHog project, copy the project API key, and paste it into the `comicblocker-posthog-key` meta tag in `index.html`:
+
+```html
+<meta name="comicblocker-posthog-key" content="phc_your_project_key_here" />
+```
+
+The app tracks interaction signals only: session duration milestones, total click count in the session summary, Ko-fi clicks, script exports, project saves, and PDF export started/completed/failed. It does not send comic text, page direction, panel scripts, imported images, project titles, or author names.

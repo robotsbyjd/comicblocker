@@ -12,6 +12,9 @@
 <meta name="twitter:title" content="Comic Blocker — Block your comic before you draw it" />
 <meta name="twitter:description" content="A free comic panel layout and scripting tool for writers. Block pages, write scripts, and export your storyboard as PDF." />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<meta name="comicblocker-posthog-key" content="phc_zdA5kewd34jZiWSZV7xfsh9WrF5L66sMBsWcShYcikSp" />
+<meta name="comicblocker-posthog-host" content="https://us.i.posthog.com" />
+<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
@@ -836,6 +839,7 @@
   const HISTORY_LIMIT = 50;
   const AUTOSAVE_KEY = 'comic-blocker-autosave-v1';
   const START_SEEN_KEY = 'comic-blocker-start-seen-v1';
+  const ANALYTICS_ID_KEY = 'comic-blocker-analytics-id-v1';
 
   const FONT_PRESETS = {
     Dialogue: { family: "'Comic Sans MS', 'Marker Felt', cursive", size: 14, weight: 500 },
@@ -2065,6 +2069,116 @@
   const projectTitleInput = $('project-title');
   const projectAuthorInput = $('project-author');
 
+  function projectStats(){
+    const allElements = pages.flatMap(p=>p.elements || []);
+    return {
+      page_count: pages.length,
+      panel_count: allElements.filter(el=>el.type === 'panel').length,
+      element_count: allElements.length,
+      has_project_title: !!(projectMeta.title && projectMeta.title.trim())
+    };
+  }
+
+  const analytics = (()=>{
+    const key = (document.querySelector('meta[name="comicblocker-posthog-key"]')?.content || '').trim();
+    const host = (document.querySelector('meta[name="comicblocker-posthog-host"]')?.content || 'https://us.i.posthog.com').replace(/\/$/, '');
+    const enabled = !!key;
+    const startedAt = Date.now();
+    let clickCount = 0;
+    let pdfExported = false;
+    let kofiClicked = false;
+    let summarySent = false;
+
+    function distinctId(){
+      try {
+        let id = localStorage.getItem(ANALYTICS_ID_KEY);
+        if(!id){
+          id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'anon-' + Math.random().toString(36).slice(2) + Date.now();
+          localStorage.setItem(ANALYTICS_ID_KEY, id);
+        }
+        return id;
+      } catch(err){
+        return 'anon-' + Math.random().toString(36).slice(2) + Date.now();
+      }
+    }
+
+    function cleanProps(props){
+      const out = {};
+      Object.entries(props || {}).forEach(([key, value])=>{
+        if(['string','number','boolean'].includes(typeof value) || value === null){
+          out[key] = typeof value === 'string' ? value.slice(0, 255) : value;
+        }
+      });
+      return out;
+    }
+
+    function track(event, props={}, useBeacon=false){
+      if(!enabled) return;
+      const payload = JSON.stringify({
+        api_key: key,
+        event,
+        distinct_id: distinctId(),
+        properties: Object.assign({
+          app: 'comic_blocker',
+          app_version: 8,
+          source: 'static_site'
+        }, cleanProps(props))
+      });
+      const url = host + '/capture/';
+      if(useBeacon && navigator.sendBeacon){
+        navigator.sendBeacon(url, new Blob([payload], {type: 'application/json'}));
+        return;
+      }
+      fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: payload,
+        keepalive: true
+      }).catch(()=>{});
+    }
+
+    function sessionProps(){
+      return Object.assign({
+        duration_seconds: Math.round((Date.now() - startedAt) / 1000),
+        click_count: clickCount,
+        pdf_exported: pdfExported,
+        kofi_clicked: kofiClicked
+      }, projectStats());
+    }
+
+    function sendSummary(){
+      if(summarySent) return;
+      summarySent = true;
+      track('app_session_summary', sessionProps(), true);
+    }
+
+    document.addEventListener('click', e=>{
+      if(e.target.closest('button,a,input,select,textarea')) clickCount += 1;
+    }, true);
+
+    window.addEventListener('pagehide', sendSummary);
+    setTimeout(()=>track('session_30s', sessionProps(), true), 30000);
+    setTimeout(()=>track('session_60s', sessionProps(), true), 60000);
+    track('app_loaded', projectStats());
+
+    return {
+      enabled,
+      track,
+      markPdfExported(){ pdfExported = true; },
+      markKofiClicked(){ kofiClicked = true; },
+      sessionProps
+    };
+  })();
+
+  document.querySelectorAll('a[href*="ko-fi.com"]').forEach(link=>{
+    link.addEventListener('click', ()=>{
+      analytics.markKofiClicked();
+      analytics.track('kofi_clicked', Object.assign({
+        location: link.id === 'kofi-link' ? 'header' : 'help_modal'
+      }, projectStats()), true);
+    });
+  });
+
   function showToast(msg, ms=2000){
     toast.textContent = msg;
     toast.classList.add('show');
@@ -3212,6 +3326,7 @@
     if(!out.trim()){ showToast('No script content yet'); return; }
     const ts = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
     downloadFile(out, `comic-blocker-script-${ts}.txt`, 'text/plain');
+    analytics.track('script_exported', projectStats());
     showToast('Script downloaded');
   };
 
@@ -3234,6 +3349,7 @@
     historyPast = [];
     historyFuture = [];
     updateUndoRedoButtons();
+    analytics.track('project_saved', projectStats());
     showToast('Project saved');
   };
   $('load-project').onclick = ()=>$('load-input').click();
@@ -3409,6 +3525,8 @@
 
   // PDF export
   $('export-pdf').onclick = ()=>{
+    const exportStartedAt = Date.now();
+    analytics.track('pdf_export_started', projectStats());
     showToast('Building PDF…', 1500);
     setTimeout(()=>{
       try {
@@ -3554,8 +3672,18 @@
         }
         const ts = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
         pdf.save(`comic-blocker-${ts}.pdf`);
+        analytics.markPdfExported();
+        analytics.track('pdf_export_completed', Object.assign({
+          export_duration_ms: Date.now() - exportStartedAt
+        }, projectStats()));
         showToast('PDF ready');
-      } catch(err){ console.error(err); showToast('PDF failed: ' + err.message, 3500); }
+      } catch(err){
+        console.error(err);
+        analytics.track('pdf_export_failed', Object.assign({
+          error_name: err && err.name ? err.name : 'Error'
+        }, projectStats()));
+        showToast('PDF failed: ' + err.message, 3500);
+      }
     }, 50);
   };
 
